@@ -1,0 +1,17 @@
+# Virtual environment
+.venv/
+env/
+venv/
+
+# Bytecode & cache
+__pycache__/
+*.py[cod]
+
+# Database & local secrets
+*.sqlite3
+db.sqlite3
+.env
+
+# OS/IDE junk
+.DS_Store
+.vscode/
