@@ -1,3 +1,6 @@
+import base64
+from email.message import EmailMessage
+
 from googleapiclient.discovery import build
 
 
@@ -64,14 +67,52 @@ class GmailService:
 
         return response
 
+    @staticmethod
+    def _build_raw_message(to, subject, body):
+        message = EmailMessage()
+        message["To"] = to
+        message["Subject"] = subject
+        message.set_content(body)
+
+        return base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
+
     def send(self, to, subject, body):
-        
-        pass
+        raw_message = self._build_raw_message(to, subject, body)
+
+        return (
+            self.gmail.users()
+            .messages()
+            .send(
+                userId="me",
+                body={"raw": raw_message},
+            )
+            .execute()
+        )
 
     def create_draft(self, to, subject, body):
-        
-        pass
+        raw_message = self._build_raw_message(to, subject, body)
+
+        return (
+            self.gmail.users()
+            .drafts()
+            .create(
+                userId="me",
+                body={"message": {"raw": raw_message}},
+            )
+            .execute()
+        )
 
     def get_attachment(self, message_id, attachment_id):
-        
-        pass
+        return (
+            self.gmail.users()
+            .messages()
+            .attachments()
+            .get(
+                userId="me",
+                messageId=message_id,
+                id=attachment_id,
+            )
+            .execute()
+        )
+
+    
