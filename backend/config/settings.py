@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     'common',
     'accounts',
     'google_auth',
+    'gmail_integration',
     'rest_framework',
     
     
