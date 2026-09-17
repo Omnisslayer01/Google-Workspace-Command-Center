@@ -2,6 +2,10 @@ from rest_framework import serializers
 
 
 class CalendarEventSerializer(serializers.Serializer):
+    """
+    Validates data required to create a Calendar event.
+    """
+
     summary = serializers.CharField(
         max_length=255,
     )
@@ -32,9 +36,21 @@ class CalendarEventSerializer(serializers.Serializer):
             )
 
         return attrs
+
+
 class CalendarEventQuerySerializer(serializers.Serializer):
-    start = serializers.DateTimeField(required=False)
-    end = serializers.DateTimeField(required=False)
+    """
+    Validates query parameters for listing calendar events.
+    """
+
+    start = serializers.DateTimeField(
+        required=False,
+    )
+
+    end = serializers.DateTimeField(
+        required=False,
+    )
+
     page_token = serializers.CharField(
         required=False,
         allow_blank=False,
@@ -50,8 +66,13 @@ class CalendarEventQuerySerializer(serializers.Serializer):
             )
 
         return attrs
-    
+
+
 class CalendarEventUpdateSerializer(serializers.Serializer):
+    """
+    Validates fields for partial event updates.
+    """
+
     summary = serializers.CharField(
         max_length=255,
         required=False,
@@ -92,6 +113,25 @@ class CalendarEventUpdateSerializer(serializers.Serializer):
         if not attrs:
             raise serializers.ValidationError(
                 "At least one field is required to update the event."
+            )
+
+        return attrs
+class CalendarAnalyticsQuerySerializer(serializers.Serializer):
+    start = serializers.DateTimeField(
+        required=False,
+    )
+
+    end = serializers.DateTimeField(
+        required=False,
+    )
+
+    def validate(self, attrs):
+        start = attrs.get("start")
+        end = attrs.get("end")
+
+        if start and end and end <= start:
+            raise serializers.ValidationError(
+                "end must be after start."
             )
 
         return attrs

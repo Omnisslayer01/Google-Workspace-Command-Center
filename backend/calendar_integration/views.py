@@ -4,8 +4,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .serializers import (
-    CalendarEventSerializer,
+    CalendarAnalyticsQuerySerializer,
     CalendarEventQuerySerializer,
+    CalendarEventSerializer,
     CalendarEventUpdateSerializer,
 )
 from .services import CalendarService
@@ -107,3 +108,44 @@ class CalendarEventDetailView(APIView):
         service.delete_event(event_id)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+class CalendarAnalyticsView(APIView):
+    """
+    Calendar analytics endpoint.
+
+    GET /api/calendar/analytics/
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        serializer = CalendarAnalyticsQuerySerializer(
+            data=request.query_params
+        )
+
+        serializer.is_valid(raise_exception=True)
+
+        validated_data = serializer.validated_data
+
+        start = validated_data.get("start")
+        end = validated_data.get("end")
+
+        try:
+            service = CalendarService(request.user)
+
+            analytics = service.get_analytics(
+                time_min=(
+                    start.isoformat()
+                    if start
+                    else None
+                ),
+                time_max=(
+                    end.isoformat()
+                    if end
+                    else None
+                ),
+            )
+
+            return Response(analytics)
+
+        except CalendarServiceError as exc:
+            return handle_calendar_error(exc)

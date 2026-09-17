@@ -3,5 +3,8 @@ from django.urls import include, path
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("api/calendar/", include("calendar_integration.urls")),
+    path(
+        "api/calendar/",
+        include("calendar_integration.urls"),
+    ),
 ]
