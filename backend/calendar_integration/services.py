@@ -106,3 +106,54 @@ class CalendarService:
         )
 
         return response
+    def update_event(
+        self,
+        event_id,
+        summary=None,
+        start_time=None,
+        end_time=None,
+        description=None,
+        location=None,
+        attendees=None,
+    ):
+        event = {}
+
+        if summary is not None:
+            event["summary"] = summary
+
+        if start_time is not None:
+            event["start"] = {
+                "dateTime": start_time,
+            }
+
+        if end_time is not None:
+            event["end"] = {
+                "dateTime": end_time,
+            }
+
+        if description is not None:
+            event["description"] = description
+
+        if location is not None:
+            event["location"] = location
+
+        if attendees is not None:
+            event["attendees"] = [
+                {"email": email}
+                for email in attendees
+            ]
+
+        if not event:
+            raise ValueError("At least one field is required to update the event.")
+
+        response = (
+            self.calendar.events()
+            .patch(
+                calendarId="primary",
+                eventId=event_id,
+                body=event,
+            )
+            .execute()
+        )
+
+        return response
