@@ -115,6 +115,8 @@ SIMPLE_JWT = {
 
 FERNET_KEY = os.getenv('FERNET_KEY', '')
 
+GOOGLE_TOKEN_ENCRYPTION_KEY = os.getenv('GOOGLE_TOKEN_ENCRYPTION_KEY', '')
+
 
 # ---------------- Celery ----------------
 
