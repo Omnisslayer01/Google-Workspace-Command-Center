@@ -247,26 +247,42 @@ class CalendarService:
         )
     def get_analytics(self, time_min=None, time_max=None):
         """
-        Calculate lightweight meeting analytics from Google Calendar.
+        Calculate meeting analytics from Google Calendar.
+
+        Returns:
+            total_meetings
+            meetings_by_day
+            meetings_by_week
         """
 
-        response = self.list_events(
-            time_min=time_min,
-            time_max=time_max,
-            max_results=2500,
-        )
+        events = []
+        page_token = None
 
-        events = response.get("items", [])
+        while True:
+            response = self.list_events(
+                time_min=time_min,
+                time_max=time_max,
+                max_results=2500,
+                page_token=page_token,
+            )
+
+            events.extend(response.get("items", []))
+
+            page_token = response.get("nextPageToken")
+
+            if not page_token:
+                break
 
         meetings_by_day = {}
+        meetings_by_week = {}
 
         for event in events:
             start = event.get("start", {})
 
-            # All-day events use "date"
-            # Timed events use "dateTime"
+            # All-day event
             event_date = start.get("date")
 
+            # Timed event
             if not event_date:
                 date_time = start.get("dateTime")
 
@@ -276,11 +292,29 @@ class CalendarService:
             if not event_date:
                 continue
 
+            # Count by day
             meetings_by_day[event_date] = (
                 meetings_by_day.get(event_date, 0) + 1
+            )
+
+            # Count by week.
+            # Monday is used as the week identifier.
+            from datetime import date, timedelta
+
+            event_date_obj = date.fromisoformat(event_date)
+
+            monday = event_date_obj - timedelta(
+                days=event_date_obj.weekday()
+            )
+
+            week_key = monday.isoformat()
+
+            meetings_by_week[week_key] = (
+                meetings_by_week.get(week_key, 0) + 1
             )
 
         return {
             "total_meetings": len(events),
             "meetings_by_day": meetings_by_day,
+            "meetings_by_week": meetings_by_week,
         }
