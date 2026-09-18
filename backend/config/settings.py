@@ -25,7 +25,7 @@ INSTALLED_APPS = [
     'accounts',
     'google_auth',
     'rest_framework',
-    
+    'sheets',
     
 ]
 
