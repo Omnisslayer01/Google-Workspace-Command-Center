@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-from django.db import models
-
-# Create your models here.
-=======
 from django.conf import settings
 from django.db import models
 from cryptography.fernet import Fernet
@@ -50,4 +45,4 @@ class GoogleCredential(models.Model):
 
     def __str__(self):
         return f"GoogleCredential({self.user.username})"
->>>>>>> madhura-google-workspace
+

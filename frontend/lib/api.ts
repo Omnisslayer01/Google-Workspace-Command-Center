@@ -41,11 +41,15 @@ async function apiFetch<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const url = `${BASE_URL}${path}`;
+  // Get token from localStorage if we are in the browser
+  const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+  const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
 
   const res = await fetch(url, {
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
+      ...authHeader,
       ...(options.headers ?? {}),
     },
     ...options,

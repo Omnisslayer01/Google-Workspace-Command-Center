@@ -19,7 +19,7 @@ import Button from "@/components/ui/Button";
 import FormError from "@/components/ui/FormError";
 import Divider from "@/components/ui/Divider";
 import { register, getGoogleOAuthUrl, extractErrorMessage } from "@/lib/api";
-
+import { useRouter } from "next/navigation";
 // ─── Field-level validation ──────────────────────────────────────────────────
 
 interface FieldErrors {
@@ -59,6 +59,7 @@ function validate(
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -94,9 +95,8 @@ export default function RegisterPage() {
         password,
         confirm_password: confirmPassword,
       });
-      // TODO (BE1 integration): store tokens from _response.tokens and
-      // redirect to the onboarding/dashboard once session layer is ready.
-      // e.g. router.push("/dashboard")
+      localStorage.setItem("access_token", _response.tokens.access);
+      localStorage.setItem("refresh_token", _response.tokens.refresh);
       console.info("Registration successful", _response.user.email);
       setRegistered(true);
     } catch (err) {

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Geist, Newsreader, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -7,10 +7,22 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
+// Prashant's elegant serif font
+const newsreader = Newsreader({
+  variable: "--font-newsreader",
+  subsets: ["latin"],
+  style: ["normal", "italic"],
+});
+
+// Prashant's monospace font
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
   title: "Google Workspace Command Center",
-  description:
-    "Manage your Gmail, Calendar, Drive, and Google Workspace from one place.",
+  description: "Manage your Gmail, Calendar, Drive, and Google Workspace from one place.",
 };
 
 export default function RootLayout({
@@ -19,8 +31,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${geistSans.variable} h-full antialiased`}>
-      <body className="min-h-full">{children}</body>
+    <html 
+      lang="en" 
+      className={`${geistSans.variable} ${newsreader.variable} ${jetbrainsMono.variable} h-full antialiased`}
+    >
+      <body className="min-h-full font-sans">{children}</body>
     </html>
   );
 }

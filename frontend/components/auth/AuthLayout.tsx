@@ -1,56 +1,59 @@
-/**
- * AuthLayout — shared shell for all authentication pages (Login, Register).
- *
- * Layout:
- *   - Full-height page with the brand background (#F8F7F2).
- *   - Centred card containing the GWCC wordmark, a page title/subtitle, and
- *     the form content passed as children.
- *   - Responsive: full-screen on mobile, constrained card on tablet+.
- */
-
 import type { ReactNode } from "react";
+import Link from "next/link";
 
 interface AuthLayoutProps {
-  /** Page-level heading, e.g. "Sign in" */
   title: string;
-  /** Optional sub-heading, e.g. "Welcome back" */
   subtitle?: string;
   children: ReactNode;
 }
 
-export default function AuthLayout({
-  title,
-  subtitle,
-  children,
-}: AuthLayoutProps) {
+export default function AuthLayout({ title, subtitle, children }: AuthLayoutProps) {
   return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#F8F7F2] px-4 py-12">
-      {/* Card */}
-      <div className="w-full max-w-[440px] bg-white border border-stone-200 rounded-2xl shadow-sm px-8 py-10 sm:px-10">
-        {/* Wordmark */}
-        <div className="mb-8">
-          <span className="text-[13px] font-semibold tracking-[0.18em] uppercase text-stone-400 select-none">
-            Google Workspace
-          </span>
-          <h1 className="mt-0.5 text-[22px] font-bold tracking-tight text-stone-900 leading-snug">
-            Command Center
-          </h1>
+    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-google-surface px-4 py-12">
+      
+      {/* Back to Home Link */}
+      <div className="absolute top-8 left-8">
+        <Link href="/" className="text-sm font-medium text-google-gray hover:text-google-blue transition-colors">
+          &larr; Back to Home
+        </Link>
+      </div>
+
+      {/* Login Card */}
+      <div className="w-full max-w-[440px] bg-white border border-google-border rounded-xl shadow-sm px-8 py-10 sm:px-10">
+        
+        {/* Concept 5 Branding (4-color grid + Wordmark) */}
+        <div className="mb-8 flex flex-col items-start gap-3">
+          <div className="grid grid-cols-2 gap-0.5 w-6 h-6">
+            <span className="bg-google-red rounded-sm"></span>
+            <span className="bg-google-blue rounded-sm"></span>
+            <span className="bg-google-green rounded-sm"></span>
+            <span className="bg-google-yellow rounded-sm"></span>
+          </div>
+          <div>
+            <span className="text-[11px] font-bold tracking-widest uppercase text-google-gray select-none">
+              Google Workspace
+            </span>
+            <h1 className="text-xl font-bold tracking-tight text-google-dark">
+              Command Center
+            </h1>
+          </div>
         </div>
 
         {/* Page title */}
         <div className="mb-6">
-          <h2 className="text-xl font-semibold text-stone-900">{title}</h2>
+          <h2 className="text-xl font-semibold text-google-dark">{title}</h2>
           {subtitle && (
-            <p className="mt-1 text-sm text-stone-500">{subtitle}</p>
+            <p className="mt-1 text-sm text-google-gray">{subtitle}</p>
           )}
         </div>
 
-        {/* Form content */}
+        {/* Form content (The Google SSO Button) */}
         {children}
-      </div>
 
+      </div>
+      
       {/* Footer note */}
-      <p className="mt-6 text-xs text-stone-400 text-center">
+      <p className="mt-8 text-xs text-google-gray text-center">
         &copy; {new Date().getFullYear()} Google Workspace Command Center
       </p>
     </div>
