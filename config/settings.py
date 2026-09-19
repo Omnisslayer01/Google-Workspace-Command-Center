@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'common',
     'accounts',
     'google_auth',
+    'rbac',
 ]
 
 MIDDLEWARE = [

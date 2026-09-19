@@ -8,7 +8,13 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 
-from .services import get_flow, SCOPE_DESCRIPTIONS, encrypt_token
+from .services import (
+    get_flow,
+    SCOPE_DESCRIPTIONS,
+    encrypt_token,
+    decrypt_token,
+    revoke_google_token,
+)
 from .models import GoogleCredential
 
 
@@ -18,7 +24,7 @@ class GoogleConnectView(APIView):
     def get(self, request):
         flow = get_flow()
 
-        # Create a signed state containing the logged-in user's ID
+        
         state = signing.dumps({
             'user_id': request.user.id,
         })
@@ -38,7 +44,7 @@ class GoogleConnectView(APIView):
 
 
 class GoogleCallbackView(APIView):
-    # Google redirects here without JWT authentication
+   
     permission_classes = (AllowAny,)
 
     def get(self, request):
@@ -63,7 +69,7 @@ class GoogleCallbackView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Verify state and identify the original logged-in user
+        
         try:
             state_data = signing.loads(state, max_age=600)
             user_id = state_data['user_id']
@@ -112,4 +118,45 @@ class GoogleCallbackView(APIView):
         return Response({
             'success': True,
             'message': 'Google account connected successfully.',
+        })
+
+
+class GoogleDisconnectView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request):
+        try:
+            cred_obj = GoogleCredential.objects.get(user=request.user)
+        except GoogleCredential.DoesNotExist:
+            return Response(
+                {
+                    'success': False,
+                    'error': 'No connected Google account found.'
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+       
+        token_to_revoke = (
+            decrypt_token(cred_obj.refresh_token)
+            or decrypt_token(cred_obj.access_token)
+        )
+
+        revoked = False
+        if token_to_revoke:
+            revoked = revoke_google_token(token_to_revoke)
+
+       
+        cred_obj.delete()
+
+         # TODO: Pause or cancel any Celery automations tied to this user
+        # so nothing keeps running against a dead credential.
+        # cancel_user_google_automations(request.user.id)
+
+        
+
+        return Response({
+            'success': True,
+            'message': 'Google account disconnected successfully.',
+            'google_revoke_confirmed': revoked,
         })
