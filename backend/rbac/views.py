@@ -5,10 +5,7 @@ from .permissions import HasOrgPermission
 
 
 class TestOrgPermissionView(APIView):
-    """
-    Fakht test karnyasathi banवलela view.
-    HasOrgPermission barobar kaam karto ka he check karnyasathi.
-    """
+   
 
     permission_classes = [HasOrgPermission]
     required_roles = ['admin', 'manager']
