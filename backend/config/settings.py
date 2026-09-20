@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     'google_auth',
     'gmail_integration',
     'corsheaders',
+    'drive',
 
 ]
 
