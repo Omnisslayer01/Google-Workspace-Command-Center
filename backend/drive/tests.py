@@ -1,9 +1,9 @@
 from io import BytesIO
-from unittest.mock import Mock
-
 from django.test import TestCase
-
 from .services import DriveService
+from unittest.mock import Mock, patch
+from django.contrib.auth.models import User
+from rest_framework.test import APITestCase
 
 
 class DriveServiceTests(TestCase):
@@ -162,3 +162,110 @@ class DriveServiceTests(TestCase):
         self.drive_client.files.return_value.delete.assert_called_once_with(
             fileId="file-1",
         )
+
+class DriveEndpointTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="testuser",
+            password="testpassword",
+        )
+        self.client.force_authenticate(user=self.user)
+
+    @patch("drive.views.DriveService")
+    def test_list_files_endpoint(self, mock_service):
+        mock_service.return_value.list_files.return_value = {
+            "files": [
+                {
+                    "id": "file-123",
+                    "name": "test.pdf",
+                }
+            ]
+        }
+
+        response = self.client.get("/api/drive/files/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data["success"])
+        self.assertEqual(
+            response.data["data"]["files"][0]["name"],
+            "test.pdf",
+        )
+
+    @patch("drive.views.DriveService")
+    def test_upload_file_endpoint(self, mock_service):
+        mock_service.return_value.upload.return_value = {
+            "id": "file-123",
+            "name": "test.txt",
+        }
+
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        uploaded_file = SimpleUploadedFile(
+            "test.txt",
+            b"hello world",
+            content_type="text/plain",
+        )
+
+        response = self.client.post(
+            "/api/drive/files/upload/",
+            {
+                "file": uploaded_file,
+            },
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(response.data["success"])
+        self.assertEqual(
+            response.data["data"]["name"],
+            "test.txt",
+        )
+    @patch("drive.views.DriveService")
+    def test_create_folder_endpoint(self, mock_service):
+        mock_service.return_value.create_folder.return_value = {
+            "id": "folder-123",
+            "name": "Invoices",
+            "mimeType": "application/vnd.google-apps.folder",
+        }
+
+        response = self.client.post(
+            "/api/drive/folders/",
+            {
+                "name": "Invoices",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(response.data["success"])
+        self.assertEqual(
+            response.data["data"]["name"],
+            "Invoices",
+        )
+
+    def test_create_folder_requires_name(self):
+        response = self.client.post(
+            "/api/drive/folders/",
+            {},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(response.data["success"])
+
+    def test_upload_requires_file(self):
+        response = self.client.post(
+            "/api/drive/files/upload/",
+            {},
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(response.data["success"])
+
+    def test_unauthenticated_request_is_rejected(self):
+        self.client.force_authenticate(user=None)
+
+        response = self.client.get("/api/drive/files/")
+
+        self.assertEqual(response.status_code, 401)
