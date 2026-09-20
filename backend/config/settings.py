@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'gmail_integration',
     'notifications',
     'corsheaders',
+    'drive',
 
 ]
 
