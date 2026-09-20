@@ -10,6 +10,9 @@ urlpatterns = [
     # 2. Send the rest of /api/auth/... traffic to Jay's accounts app
     path('api/auth/', include('accounts.urls')), 
     
-    # (If Jay added other apps like gmail_integration, they go here too)
-    # path('api/gmail/', include('gmail_integration.urls')),
+    # Gmail API endpoints
+    path('api/gmail/', include('gmail_integration.urls')),
+
+    # Notifications API endpoints
+    path('api/notifications/', include('notifications.urls')),
 ]
