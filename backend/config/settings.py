@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'accounts',
     'google_auth',
     'gmail_integration',
+    'notifications',
     'corsheaders',
 
 ]
@@ -91,9 +92,21 @@ USE_TZ = True
 
 MAILERS = {
     'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
+        'BACKEND': os.getenv(
+            'EMAIL_BACKEND',
+            'django.core.mail.backends.console.EmailBackend',
+        ),
+        'HOST': os.getenv('EMAIL_HOST', 'smtp.gmail.com'),
+        'PORT': int(os.getenv('EMAIL_PORT', 587)),
+        'USE_TLS': os.getenv('EMAIL_USE_TLS', 'True') == 'True',
+        'USERNAME': os.getenv('EMAIL_HOST_USER', ''),
+        'PASSWORD': os.getenv('EMAIL_HOST_PASSWORD', ''),
+        'FROM_EMAIL': os.getenv('DEFAULT_FROM_EMAIL', 'noreply@gwcc.local'),
     },
 }
+
+# Convenience alias used by Django's send_mail() helper and Celery tasks.
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@gwcc.local')
 
 STATIC_URL = 'static/'
 
