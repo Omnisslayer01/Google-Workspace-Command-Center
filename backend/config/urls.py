@@ -1,18 +1,23 @@
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import include, path
+
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    
-    # 1. Send /api/auth/google/... traffic to Madhura's app FIRST
-    path('api/auth/google/', include('google_auth.urls')),
-    
-    # 2. Send the rest of /api/auth/... traffic to Jay's accounts app
-    path('api/auth/', include('accounts.urls')), 
-    
+    path("admin/", admin.site.urls),
+
+    # Google OAuth endpoints
+    # Keep Google OAuth before the general accounts auth routes.
+    path("api/auth/google/", include("google_auth.urls")),
+
+    # General authentication endpoints
+    path("api/auth/", include("accounts.urls")),
+
     # Gmail API endpoints
-    path('api/gmail/', include('gmail_integration.urls')),
+    path("api/gmail/", include("gmail_integration.urls")),
 
     # Notifications API endpoints
-    path('api/notifications/', include('notifications.urls')),
+    path("api/notifications/", include("notifications.urls")),
+
+    # Google Drive API endpoints
+    path("api/drive/", include("drive.urls")),
 ]
