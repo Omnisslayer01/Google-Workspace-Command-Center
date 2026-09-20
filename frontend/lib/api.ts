@@ -135,3 +135,151 @@ export function extractErrorMessage(err: unknown): string {
 
   return "An unexpected error occurred. Please try again.";
 }
+
+// ─── Gmail endpoints ─────────────────────────────────────────────────────────
+
+import type {
+  GmailComposeRequest,
+  GmailDraftResponse,
+  GmailListParams,
+  GmailMessage,
+  GmailMessageListResponse,
+  GmailSearchParams,
+  GmailSendResponse,
+} from "../types/gmail";
+
+import type {
+  NotificationListResponse,
+  NotificationMarkAllReadResponse,
+  NotificationReadResponse,
+} from "../types/notifications";
+
+/**
+ * GET /api/gmail/messages/
+ * Returns the inbox message list for the authenticated user.
+ * Uses Google's nextPageToken pagination — pass page_token from the previous
+ * response to fetch the next page.
+ */
+export async function listGmailMessages(
+  params: GmailListParams = {}
+): Promise<GmailMessageListResponse> {
+  const query = new URLSearchParams();
+  if (params.max_results) query.set("max_results", String(params.max_results));
+  if (params.page_token) query.set("page_token", params.page_token);
+  const qs = query.toString() ? `?${query}` : "";
+  return apiFetch<GmailMessageListResponse>(`/api/gmail/messages/${qs}`);
+}
+
+/**
+ * GET /api/gmail/messages/<id>/
+ * Returns a single Gmail message in full format.
+ */
+export async function getGmailMessage(messageId: string): Promise<GmailMessage> {
+  return apiFetch<GmailMessage>(`/api/gmail/messages/${messageId}/`);
+}
+
+/**
+ * GET /api/gmail/search/?q=<query>
+ * Searches Gmail messages using Gmail query syntax (e.g. "from:alice subject:invoice").
+ */
+export async function searchGmailMessages(
+  params: GmailSearchParams
+): Promise<GmailMessageListResponse> {
+  const query = new URLSearchParams({ q: params.q });
+  if (params.max_results) query.set("max_results", String(params.max_results));
+  if (params.page_token) query.set("page_token", params.page_token);
+  return apiFetch<GmailMessageListResponse>(`/api/gmail/search/?${query}`);
+}
+
+/**
+ * POST /api/gmail/send/
+ * Sends an email on behalf of the authenticated user.
+ *
+ * NOTE: Requires gmail.send scope. The current OAuth config only grants
+ * gmail.readonly — the backend will return 403 until the scope is upgraded
+ * and users re-authenticate.
+ */
+export async function sendGmailMessage(
+  payload: GmailComposeRequest
+): Promise<GmailSendResponse> {
+  return apiFetch<GmailSendResponse>("/api/gmail/send/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * POST /api/gmail/drafts/
+ * Creates a Gmail draft on behalf of the authenticated user.
+ *
+ * NOTE: Same scope caveat as sendGmailMessage.
+ */
+export async function createGmailDraft(
+  payload: GmailComposeRequest
+): Promise<GmailDraftResponse> {
+  return apiFetch<GmailDraftResponse>("/api/gmail/drafts/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * GET /api/gmail/attachments/<messageId>/<attachmentId>/
+ * Downloads a Gmail attachment as a Blob.
+ * Use URL.createObjectURL(blob) to trigger a browser download.
+ */
+export async function downloadGmailAttachment(
+  messageId: string,
+  attachmentId: string
+): Promise<Blob> {
+  const url = `${BASE_URL}/api/gmail/attachments/${messageId}/${attachmentId}/`;
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const res = await fetch(url, { headers });
+  if (!res.ok) {
+    let data: unknown = {};
+    try { data = await res.json(); } catch { /* binary response */ }
+    throw new ApiResponseError(res.status, data as ApiError);
+  }
+  return res.blob();
+}
+
+// ─── Notifications endpoints ──────────────────────────────────────────────────
+
+/**
+ * GET /api/notifications/
+ * Returns notifications for the authenticated user, newest first.
+ * Pass unread_only=true to receive only unread notifications.
+ */
+export async function listNotifications(
+  unreadOnly = false
+): Promise<NotificationListResponse> {
+  const qs = unreadOnly ? "?unread_only=true" : "";
+  return apiFetch<NotificationListResponse>(`/api/notifications/${qs}`);
+}
+
+/**
+ * PATCH /api/notifications/<id>/read/
+ * Marks a single notification as read.
+ */
+export async function markNotificationRead(
+  notificationId: number
+): Promise<NotificationReadResponse> {
+  return apiFetch<NotificationReadResponse>(
+    `/api/notifications/${notificationId}/read/`,
+    { method: "PATCH" }
+  );
+}
+
+/**
+ * POST /api/notifications/read-all/
+ * Marks every unread notification as read for the current user.
+ */
+export async function markAllNotificationsRead(): Promise<NotificationMarkAllReadResponse> {
+  return apiFetch<NotificationMarkAllReadResponse>("/api/notifications/read-all/", {
+    method: "POST",
+  });
+}
