@@ -3,6 +3,7 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/rbac/', include('rbac.urls')),
     
     # 1. Send /api/auth/google/... traffic to Madhura's app FIRST
     path('api/auth/google/', include('google_auth.urls')),

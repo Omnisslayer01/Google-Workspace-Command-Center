@@ -7,7 +7,13 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .services import get_flow, encrypt_token
+from .services import (
+    get_flow,
+    SCOPE_DESCRIPTIONS,
+    encrypt_token,
+    decrypt_token,
+    revoke_google_token,
+)
 from .models import GoogleCredential
 
 User = get_user_model()
@@ -17,7 +23,12 @@ class GoogleConnectView(APIView):
 
     def get(self, request):
         flow = get_flow()
-        # Create the URL for Google's consent screen
+
+        
+        state = signing.dumps({
+            'user_id': request.user.id,
+        })
+
         authorization_url, _ = flow.authorization_url(
             access_type='offline',
             include_granted_scopes='true',
@@ -38,6 +49,7 @@ class GoogleCallbackView(APIView):
         if not code:
             return Response({'error': 'Missing authorization code.'}, status=400)
 
+        
         try:
             # 1. Exchange the code for Google credentials
             flow = get_flow()
@@ -49,6 +61,85 @@ class GoogleCallbackView(APIView):
                 'https://www.googleapis.com/oauth2/v2/userinfo',
                 headers={'Authorization': f'Bearer {credentials.token}'}
             )
+
+        User = get_user_model()
+
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response(
+                {
+                    'success': False,
+                    'error': 'User not found.'
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        flow = get_flow()
+        flow.fetch_token(code=code)
+        credentials = flow.credentials
+
+        defaults = {
+            'access_token': encrypt_token(credentials.token),
+            'token_expiry': credentials.expiry,
+            'granted_scopes': json.dumps(credentials.scopes),
+        }
+
+        if credentials.refresh_token:
+            defaults['refresh_token'] = encrypt_token(
+                credentials.refresh_token
+            )
+
+        GoogleCredential.objects.update_or_create(
+            user=user,
+            defaults=defaults,
+        )
+
+        return Response({
+            'success': True,
+            'message': 'Google account connected successfully.',
+        })
+
+
+class GoogleDisconnectView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request):
+        try:
+            cred_obj = GoogleCredential.objects.get(user=request.user)
+        except GoogleCredential.DoesNotExist:
+            return Response(
+                {
+                    'success': False,
+                    'error': 'No connected Google account found.'
+                },
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+       
+        token_to_revoke = (
+            decrypt_token(cred_obj.refresh_token)
+            or decrypt_token(cred_obj.access_token)
+        )
+
+        revoked = False
+        if token_to_revoke:
+            revoked = revoke_google_token(token_to_revoke)
+
+       
+        cred_obj.delete()
+
+         # TODO: Pause or cancel any Celery automations tied to this user
+        # so nothing keeps running against a dead credential.
+        # cancel_user_google_automations(request.user.id)
+
+        
+
+        return Response({
+            'success': True,
+            'message': 'Google account disconnected successfully.',
+            'google_revoke_confirmed': revoked,
+        })
             user_info = user_info_response.json()
             email = user_info.get('email')
 

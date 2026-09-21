@@ -2,6 +2,7 @@ import os
 import json
 from datetime import timezone as dt_timezone
 
+import requests
 from cryptography.fernet import Fernet
 from django.conf import settings
 from django.utils import timezone
@@ -165,3 +166,24 @@ def get_google_client(user):
         )
 
     return credentials
+
+
+def revoke_google_token(token):
+    """
+    Google kade jaun dilela token (access kinva refresh) revoke karto.
+    Yamule Google chya bajune pan permission kadhli jaate,
+    fakht apalya DB madhun row delete karna purse nasta.
+    """
+
+    if not token:
+        return False
+
+    response = requests.post(
+        'https://oauth2.googleapis.com/revoke',
+        params={'token': token},
+        headers={'content-type': 'application/x-www-form-urlencoded'},
+    )
+
+    # 200 aala tarch yashasvi samaj; nahitar already revoked
+    # kinva invalid token asu shakto (tarihi aapan DB row delete karnarach)
+    return response.status_code == 200

@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'common',
     'accounts',
     'google_auth',
+    'rbac',
     'gmail_integration',
     'notifications',
     'corsheaders',
