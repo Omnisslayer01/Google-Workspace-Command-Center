@@ -15,4 +15,14 @@ urlpatterns = [
 
     # Notifications API endpoints
     path('api/notifications/', include('notifications.urls')),
+    # (If Jay added other apps like gmail_integration, they go here too)
+    # path('api/gmail/', include('gmail_integration.urls')),
+    
+    # sheets app from BE2 task 1 add by Krushna 
+    path("api/sheets/", include("sheets.urls")),
+
+    # automation model added (Validates the trigger,Validates every action)
+    #Creates:(Automation,Trigger,Conditions,Actions) in one requiest
+    #BE2 Task 2 and 3 done by krushna 
+    path("api/automations/", include("automation.urls")),
 ]
