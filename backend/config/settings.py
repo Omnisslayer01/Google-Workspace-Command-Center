@@ -6,12 +6,28 @@ from dotenv import load_dotenv
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env")
 
+# SECURITY WARNING: don't run with debug turned on in production!
 SECRET_KEY = 'django-insecure-change-this-key-later-mkjh38dksn29xks-devonly'
+DEBUG = "True"
 
-DEBUG = True
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
-ALLOWED_HOSTS = []
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+#ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv("ALLOWED_HOSTS", "").split(",")
+    if host.strip()
+]
+
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -171,6 +187,43 @@ LOGGING = {
     },
 }
 
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+
+    "filters": {
+        "sensitive_data": {
+            "()": "common.logging_filters.SensitiveDataFilter",
+        }
+    },
+
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "filters": ["sensitive_data"],
+        }
+    },
+
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
+}
+
+REST_FRAMEWORK = {
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.UserRateThrottle",
+        "rest_framework.throttling.AnonRateThrottle",
+    ],
+
+    "DEFAULT_THROTTLE_RATES": {
+        "login": "5/min",
+        "oauth": "20/min",
+        "send_email": "30/min",
+        "user": "1000/day",
+        "anon": "100/day",
+    },
+}
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
 ]
