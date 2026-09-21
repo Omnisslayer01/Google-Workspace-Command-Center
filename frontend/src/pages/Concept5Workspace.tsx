@@ -1,10 +1,21 @@
 import React, { useState } from 'react';
+import { getGoogleOAuthUrl } from '../../lib/api';
 import { WORKSPACE_SERVICES, SAMPLE_WORKFLOW, CORE_PILLARS } from '../data/mockWorkspaceData';
 import { ArrowRight, Check, Terminal, Shield, Play, Mail, HardDrive, Calendar, Table, CheckCircle2 } from 'lucide-react';
 
 export const Concept5Workspace: React.FC = () => {
+  
   const [activeStep, setActiveStep] = useState<number>(1);
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
+
+  const handleGoogleConnect = async () => {
+  try {
+    const { auth_url } = await getGoogleOAuthUrl();
+    window.location.href = auth_url;
+  } catch (error) {
+    console.error('Google connection failed:', error);
+  }
+};
 
   const triggerSimulation = () => {
     setIsSimulating(true);
@@ -100,7 +111,10 @@ export const Concept5Workspace: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3 text-sm font-medium">
-            <button className="text-slate-600 hover:text-[#1a73e8] px-3 py-1.5 transition-colors">
+            <button
+              onClick={handleGoogleConnect}
+              className="text-slate-600 hover:text-[#1a73e8] px-3 py-1.5 transition-colors"
+            >
               Sign in
             </button>
             <a
@@ -638,7 +652,10 @@ export const Concept5Workspace: React.FC = () => {
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-4">
-            <button className="bg-[#1a73e8] hover:bg-[#1557b0] text-white px-8 py-4 rounded-md transition-colors text-sm font-semibold tracking-wide flex items-center gap-2 shadow-xs">
+            <button
+              onClick={handleGoogleConnect}
+              className="bg-[#1a73e8] hover:bg-[#1557b0] text-white px-8 py-4 rounded-md transition-colors text-sm font-semibold tracking-wide flex items-center gap-2 shadow-xs"
+            >
               <span>Start Workspace Connection</span>
               <ArrowRight className="w-4 h-4" />
             </button>
