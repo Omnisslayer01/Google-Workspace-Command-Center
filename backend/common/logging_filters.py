@@ -5,23 +5,8 @@ import re
 class SensitiveDataFilter(logging.Filter):
     """
     Removes access and refresh tokens before logs are written.
+    access_token / refresh_token log madhe kadhich jayla nako.
     """
-
-    PATTERNS = [
-        r"(access_token['\"]?\s*[:=]\s*['\"]?)([^'\",\s}]+)",
-        r"(refresh_token['\"]?\s*[:=]\s*['\"]?)([^'\",\s}]+)",
-    ]
-
-    def filter(self, record):
-        message = record.getMessage()
-
-        for pattern in self.PATTERNS:
-            message = re.sub(pattern, r"\1[REDACTED]", message)
-
-        record.msg = message
-        record.args = ()
-
-    """access_token / refresh_token log madhe kadhich jayla nako."""
 
     PATTERNS = [
         re.compile(r'(access_token["\']?\s*[:=]\s*["\']?)[^"\',\s]+', re.IGNORECASE),
