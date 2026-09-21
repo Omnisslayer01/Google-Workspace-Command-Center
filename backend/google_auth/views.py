@@ -81,9 +81,9 @@ class GoogleCallbackView(APIView):
             refresh_token = str(refresh)
 
             # 6. Redirect back to Jay's frontend and pass the tokens
-            frontend_url = f"http://localhost:3000/?access={access_token}&refresh={refresh_token}"
+            frontend_url = f"http://localhost:5173/?access={access_token}&refresh={refresh_token}"
             return redirect(frontend_url)
 
         except Exception as e:
             # If anything crashes, send them back to login with an error
-            return redirect("http://localhost:3000/login?error=google_auth_failed")
+            return redirect("http://localhost:5173/login?error=google_auth_failed")
