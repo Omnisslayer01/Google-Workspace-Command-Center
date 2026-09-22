@@ -10,6 +10,7 @@
 
 ### 2. Redis Setup (Required for Celery)
 We use Redis as the message broker and result backend for Celery. You can quickly start it using Docker:
+For this command to work make sure you have docker running in your background...
 ```bash
 docker run -d -p 6379:6379 --name gwcc-redis redis
 ```
