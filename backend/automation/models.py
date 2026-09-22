@@ -88,3 +88,55 @@ class Action(models.Model):
 
     def __str__(self):
         return f"{self.automation.name} - {self.type}"
+
+
+#task 4 part
+class AutomationExecution(models.Model):
+    STATUS_CHOICES = [
+        ("queued", "Queued"),
+        ("running", "Running"),
+        ("succeeded", "Succeeded"),
+        ("failed", "Failed"),
+        ("partially_succeeded", "Partially Succeeded"),
+    ]
+
+    automation = models.ForeignKey(
+        Automation,
+        on_delete=models.CASCADE,
+        related_name="executions",
+    )
+
+    status = models.CharField(
+        max_length=30,
+        choices=STATUS_CHOICES,
+        default="queued",
+    )
+
+    started_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.automation.name} - {self.status}"
+
+
+class AutomationStepResult(models.Model):
+    execution = models.ForeignKey(
+        AutomationExecution,
+        on_delete=models.CASCADE,
+        related_name="step_results",
+    )
+
+    action = models.ForeignKey(
+        Action,
+        on_delete=models.CASCADE,
+    )
+
+    status = models.CharField(max_length=20)
+    error = models.TextField(blank=True)
+
+    executed_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.action.type} - {self.status}"
+    
+
