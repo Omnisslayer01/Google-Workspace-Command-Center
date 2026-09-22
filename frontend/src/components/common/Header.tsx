@@ -25,7 +25,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
 
   const navItems = [
-    { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/calendar', label: 'Calendar', icon: CalendarDays },
     { to: '/tasks', label: 'Tasks', icon: CheckSquare },
     { to: '/sheets', label: 'Sheets', icon: Table },
@@ -91,15 +91,6 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Right Action Controls */}
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Subtle Concept review index button */}
-          <Link
-            to="/concepts"
-            className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-slate-500 hover:text-slate-900 hover:bg-slate-50 rounded-lg border border-slate-200 transition-colors"
-            title="Review Original Concepts 1-5"
-          >
-            <Layers className="w-3.5 h-3.5 text-slate-400" />
-            <span>Concepts</span>
-          </Link>
-
           {/* Notifications button & dropdown */}
           <div className="relative">
             <button

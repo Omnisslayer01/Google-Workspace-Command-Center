@@ -14,6 +14,13 @@ import { TasksPage } from "./pages/TasksPage";
 import { SheetsPage } from "./pages/SheetsPage";
 import { Concept5Workspace } from "./pages/Concept5Workspace";
 
+/**
+ * Handles the Google OAuth callback.
+ *
+ * Google redirects back to the frontend with:
+ * ?access=...
+ * ?refresh=...
+ */
 const OAuthCallbackHandler: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -47,6 +54,27 @@ const OAuthCallbackHandler: React.FC = () => {
   return null;
 };
 
+/**
+ * Protects pages that require authentication.
+ *
+ * If there is no access token, the user is sent back
+ * to the public landing page.
+ */
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const accessToken = localStorage.getItem("access_token");
+
+  if (!accessToken) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+/**
+ * Scroll to the top whenever the route changes.
+ */
 const ScrollToTop: React.FC = () => {
   const { pathname } = useLocation();
 
@@ -64,17 +92,56 @@ export const App: React.FC = () => {
       <ScrollToTop />
 
       <Routes>
-        <Route path="/" element={<Concept5Workspace />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/calendar" element={<CalendarPage />} />
-        <Route path="/tasks" element={<TasksPage />} />
-        <Route path="/sheets" element={<SheetsPage />} />
+        {/* ================= PUBLIC ================= */}
 
+        {/* Landing page */}
+        <Route path="/" element={<Concept5Workspace />} />
+
+        {/* ================= PROTECTED ================= */}
+
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/calendar"
+          element={
+            <ProtectedRoute>
+              <CalendarPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/tasks"
+          element={
+            <ProtectedRoute>
+              <TasksPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/sheets"
+          element={
+            <ProtectedRoute>
+              <SheetsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Old concept route → public landing page */}
         <Route
           path="/concept-5"
           element={<Navigate to="/" replace />}
         />
 
+        {/* Unknown routes */}
         <Route
           path="*"
           element={<Navigate to="/" replace />}
