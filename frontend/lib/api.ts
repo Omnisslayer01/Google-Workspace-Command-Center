@@ -58,29 +58,33 @@ async function apiFetch<T>(
 ): Promise<T> {
   const url = `${BASE_URL}${path}`;
 
+  // These endpoints must be accessible without an existing JWT.
+  // In particular, Google OAuth initiation must remain public.
   const isPublicAuthEndpoint =
-  path === "/api/auth/google/" ||
-  path === "/api/auth/login/" ||
-  path === "/api/auth/register/";
+    path === "/api/auth/google/" ||
+    path === "/api/auth/login/" ||
+    path === "/api/auth/register/";
 
-const token =
-  !isPublicAuthEndpoint && typeof window !== "undefined"
-    ? localStorage.getItem("access_token")
-    : null;
+  const token =
+    !isPublicAuthEndpoint && typeof window !== "undefined"
+      ? localStorage.getItem("access_token")
+      : null;
 
-const headers = new Headers(options.headers);
+  const headers = new Headers(options.headers);
 
-if (!headers.has("Content-Type")) {
-  headers.set("Content-Type", "application/json");
-}
+  // Only send Content-Type when the request has a body.
+  // This prevents unnecessary CORS preflight requests for GET endpoints.
+  if (options.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
 
-if (!headers.has("Accept")) {
-  headers.set("Accept", "application/json");
-}
+  if (!headers.has("Accept")) {
+    headers.set("Accept", "application/json");
+  }
 
-if (token) {
-  headers.set("Authorization", `Bearer ${token}`);
-}
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
 
   const res = await fetch(url, {
     ...options,
@@ -96,7 +100,10 @@ if (token) {
   }
 
   if (!res.ok) {
-    throw new ApiResponseError(res.status, data as ApiError);
+    throw new ApiResponseError(
+      res.status,
+      data as ApiError
+    );
   }
 
   return data as T;

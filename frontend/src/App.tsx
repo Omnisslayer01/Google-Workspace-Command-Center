@@ -40,7 +40,7 @@ const OAuthCallbackHandler: React.FC = () => {
     }
 
     if (accessToken || refreshToken) {
-      navigate("/", { replace: true });
+      navigate("/dashboard", { replace: true });
       return;
     }
 
