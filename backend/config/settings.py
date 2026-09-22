@@ -142,6 +142,17 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'common.pagination.StandardResultsPagination',
     'PAGE_SIZE': 20,
     'EXCEPTION_HANDLER': 'common.exceptions.custom_exception_handler',
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.UserRateThrottle",
+        "rest_framework.throttling.AnonRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "login": "5/min",
+        "oauth": "20/min",
+        "send_email": "30/min",
+        "user": "1000/day",
+        "anon": "100/day",
+    },
 }
 
 SIMPLE_JWT = {
@@ -199,43 +210,9 @@ LOGGING = {
     },
 }
 
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
 
-    "filters": {
-        "sensitive_data": {
-            "()": "common.logging_filters.SensitiveDataFilter",
-        }
-    },
 
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-            "filters": ["sensitive_data"],
-        }
-    },
 
-    "root": {
-        "handlers": ["console"],
-        "level": "INFO",
-    },
-}
-
-REST_FRAMEWORK = {
-    "DEFAULT_THROTTLE_CLASSES": [
-        "rest_framework.throttling.UserRateThrottle",
-        "rest_framework.throttling.AnonRateThrottle",
-    ],
-
-    "DEFAULT_THROTTLE_RATES": {
-        "login": "5/min",
-        "oauth": "20/min",
-        "send_email": "30/min",
-        "user": "1000/day",
-        "anon": "100/day",
-    },
-}
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:5173",
