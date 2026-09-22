@@ -54,7 +54,7 @@ class GoogleCallbackView(APIView):
         state_param = request.query_params.get('state')
         
         # Uses standard FRONTEND_URL environment variable for redirection
-        frontend_url_base = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+        frontend_url_base = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
         
         if not code:
             return Response({'error': 'Missing authorization code.'}, status=400)
