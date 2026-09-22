@@ -20,6 +20,12 @@ export const ConceptDock: React.FC = () => {
     { path: '/concept-2', label: 'Concept 2', tag: 'Visual' },
     { path: '/concept-3', label: 'Concept 3', tag: 'Warm' },
     { path: '/concept-4', label: 'Concept 4', tag: 'Colorful' },
+  const concepts = [
+    { path: '/', label: 'Overview', tag: 'All Concepts' },
+    { path: '/concept-1', label: 'Concept 1', tag: 'Editorial / Swiss' },
+    { path: '/concept-2', label: 'Concept 2', tag: 'Product / Visual' },
+    { path: '/concept-3', label: 'Concept 3', tag: 'Warm / Human' },
+    { path: '/concept-4', label: 'Concept 4', tag: 'Colorful / Modern' },
     { path: '/concept-5', label: 'Concept 5', tag: 'Workspace' },
   ];
 

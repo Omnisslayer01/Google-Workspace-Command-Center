@@ -1,2 +1,11 @@
 node_modules/
 dist/
+
+# Environment secrets — never commit
+.env.local
+.env*.local
+
+# Next.js build artifacts (leftover from previous scaffold)
+.next/
+next-env.d.ts
+

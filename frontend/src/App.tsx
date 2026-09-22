@@ -48,6 +48,14 @@ export const App: React.FC = () => {
 
       {/* Concept dock switcher (renders only on concept routes) */}
       <ConceptDock />
+        <Route path="/" element={<Concept5Workspace />} />
+        <Route path="/concept-1" element={<Navigate to="/" replace />} />
+        <Route path="/concept-2" element={<Navigate to="/" replace />} />
+        <Route path="/concept-3" element={<Navigate to="/" replace />} />
+        <Route path="/concept-4" element={<Navigate to="/" replace />} />
+        <Route path="/concept-5" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </BrowserRouter>
   );
 };
