@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'sheets',
     'automation',
+    'drive',
 
 ]
 
@@ -141,6 +142,17 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'common.pagination.StandardResultsPagination',
     'PAGE_SIZE': 20,
     'EXCEPTION_HANDLER': 'common.exceptions.custom_exception_handler',
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.UserRateThrottle",
+        "rest_framework.throttling.AnonRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "login": "5/min",
+        "oauth": "20/min",
+        "send_email": "30/min",
+        "user": "1000/day",
+        "anon": "100/day",
+    },
 }
 
 SIMPLE_JWT = {
@@ -163,6 +175,17 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
+
+CELERY_BEAT_SCHEDULE = {
+    'check-scheduled-triggers': {
+        'task': 'automation.tasks.check_scheduled_triggers',
+        'schedule': 60.0,
+    },
+    'sync-google-data': {
+        'task': 'google_auth.tasks.sync_all_google_data',
+        'schedule': 3600.0,
+    },
+}
 
 
 # ---------------- Logging (token leak protection) ----------------
@@ -187,43 +210,10 @@ LOGGING = {
     },
 }
 
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
 
-    "filters": {
-        "sensitive_data": {
-            "()": "common.logging_filters.SensitiveDataFilter",
-        }
-    },
 
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-            "filters": ["sensitive_data"],
-        }
-    },
 
-    "root": {
-        "handlers": ["console"],
-        "level": "INFO",
-    },
-}
-
-REST_FRAMEWORK = {
-    "DEFAULT_THROTTLE_CLASSES": [
-        "rest_framework.throttling.UserRateThrottle",
-        "rest_framework.throttling.AnonRateThrottle",
-    ],
-
-    "DEFAULT_THROTTLE_RATES": {
-        "login": "5/min",
-        "oauth": "20/min",
-        "send_email": "30/min",
-        "user": "1000/day",
-        "anon": "100/day",
-    },
-}
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
+    "http://localhost:5173",
 ]

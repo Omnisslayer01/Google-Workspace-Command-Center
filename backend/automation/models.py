@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+import uuid
 
 
 class Automation(models.Model):
@@ -105,6 +106,8 @@ class AutomationExecution(models.Model):
         on_delete=models.CASCADE,
         related_name="executions",
     )
+
+    idempotency_key = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
 
     status = models.CharField(
         max_length=30,
