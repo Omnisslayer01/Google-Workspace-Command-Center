@@ -14,10 +14,9 @@ import { Concept5Workspace } from "./pages/Concept5Workspace";
  * Handles the redirect from the Django Google OAuth callback.
  *
  * Backend redirects to:
- *
  * http://localhost:5173/?access=<token>&refresh=<token>
  *
- * We store those tokens and then clean the URL.
+ * The tokens are stored locally and then removed from the URL.
  */
 const OAuthCallbackHandler: React.FC = () => {
   const location = useLocation();
@@ -38,18 +37,11 @@ const OAuthCallbackHandler: React.FC = () => {
       localStorage.setItem("refresh_token", refreshToken);
     }
 
-    /*
-     * OAuth completed successfully.
-     * Remove tokens from the browser URL after storing them.
-     */
     if (accessToken || refreshToken) {
       navigate("/", { replace: true });
       return;
     }
 
-    /*
-     * If the backend sends an OAuth error, remove it from the URL.
-     */
     if (oauthError) {
       console.error("Google OAuth error:", oauthError);
       navigate("/", { replace: true });
@@ -79,30 +71,7 @@ export const App: React.FC = () => {
       <ScrollToTop />
 
       <Routes>
-        <Route
-          path="/"
-          element={<Concept5Workspace />}
-        />
-
-        <Route
-          path="/concept-1"
-          element={<Navigate to="/" replace />}
-        />
-
-        <Route
-          path="/concept-2"
-          element={<Navigate to="/" replace />}
-        />
-
-        <Route
-          path="/concept-3"
-          element={<Navigate to="/" replace />}
-        />
-
-        <Route
-          path="/concept-4"
-          element={<Navigate to="/" replace />}
-        />
+        <Route path="/" element={<Concept5Workspace />} />
 
         <Route
           path="/concept-5"
