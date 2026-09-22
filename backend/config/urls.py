@@ -3,6 +3,11 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    
+    path(
+        "api/calendar/",
+        include("calendar_integration.urls"),
+    ),
     path('api/rbac/', include('rbac.urls')),
     
     # 1. Send /api/auth/google/... traffic to Madhura's app FIRST
