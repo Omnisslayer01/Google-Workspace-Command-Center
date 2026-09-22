@@ -165,6 +165,17 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 
+CELERY_BEAT_SCHEDULE = {
+    'check-scheduled-triggers': {
+        'task': 'automation.tasks.check_scheduled_triggers',
+        'schedule': 60.0,
+    },
+    'sync-google-data': {
+        'task': 'google_auth.tasks.sync_all_google_data',
+        'schedule': 3600.0,
+    },
+}
+
 
 # ---------------- Logging (token leak protection) ----------------
 
