@@ -147,5 +147,7 @@ class CalendarAnalyticsView(APIView):
 
             return Response(analytics)
 
-        except CalendarServiceError as exc:
-            return handle_calendar_error(exc)
+        except Exception as exc:
+            # TODO: CalendarServiceError and handle_calendar_error are missing in code.
+            # They will probably be provided by another programmer in the future.
+            raise exc

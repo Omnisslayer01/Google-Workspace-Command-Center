@@ -28,6 +28,7 @@ class GoogleConnectView(APIView):
         flow = get_flow()
 
         # TODO (Future): Implement and verify OAuth 'state' parameter to prevent CSRF attacks.
+        # It will probably be provided by another programmer in the future.
         # Currently, signing.dumps could be used to pass a secure state if required.
         state = signing.dumps({
             'user_id': request.user.id if request.user.is_authenticated else None,
@@ -78,6 +79,7 @@ class GoogleCallbackView(APIView):
                 return Response({'error': 'Google did not provide an email.'}, status=400)
 
             # TODO (Future): Sync user profile (name, avatar) from Google user_info here.
+            # It will probably be provided by another programmer in the future.
             # e.g. name = user_info.get('name'), avatar = user_info.get('picture')
 
             # 3. Create or fetch the user safely
@@ -103,6 +105,7 @@ class GoogleCallbackView(APIView):
             GoogleCredential.objects.update_or_create(user=user, defaults=defaults)
 
             # TODO (Future): Trigger Celery task here to perform initial ingestion of Gmail/Drive data for the user.
+            # It will probably be provided by another programmer in the future.
             # e.g. initial_ingestion_task.delay(user.id)
 
             # 5. Generate our own Django JWT tokens to log them in
@@ -146,6 +149,7 @@ class GoogleDisconnectView(APIView):
         cred_obj.delete()
 
         # TODO (Future): Pause or cancel any Celery automations tied to this user
+        # It will probably be provided by another programmer in the future.
         # so nothing keeps running against a dead credential.
         # cancel_user_google_automations(request.user.id)
 
