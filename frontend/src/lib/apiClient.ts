@@ -38,6 +38,98 @@ const getBaseUrl = (): string => {
   return '';
 };
 
+/**
+ * Prevent multiple API requests from trying to refresh
+ * the same JWT at the same time.
+ */
+let refreshPromise: Promise<string | null> | null = null;
+
+const refreshAccessToken = async (): Promise<string | null> => {
+  const refreshToken = localStorage.getItem('refresh_token');
+
+  if (!refreshToken) {
+    return null;
+  }
+
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  refreshPromise = (async () => {
+    try {
+      const baseUrl = getBaseUrl();
+
+      const response = await fetch(`${baseUrl}/api/auth/refresh/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          refresh: refreshToken,
+        }),
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const data = await response.json();
+
+      const newAccessToken = data?.access;
+
+      if (!newAccessToken) {
+        return null;
+      }
+
+      localStorage.setItem('access_token', newAccessToken);
+
+      // ROTATE_REFRESH_TOKENS is enabled on the backend.
+      // Store the new refresh token when one is returned.
+      if (data?.refresh) {
+        localStorage.setItem('refresh_token', data.refresh);
+      }
+
+      return newAccessToken;
+    } catch {
+      return null;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+};
+
+const buildRequestHeaders = (
+  options: RequestInit,
+  accessToken: string | null
+): Headers => {
+  const headers = new Headers(options.headers);
+
+  headers.set('Accept', 'application/json');
+
+  if (accessToken) {
+    headers.set('Authorization', `Bearer ${accessToken}`);
+  }
+
+  if (options.body && !(options.body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  return headers;
+};
+
+const parseErrorResponse = async (
+  response: Response
+): Promise<any | null> => {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+};
+
 export async function apiFetch<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -50,46 +142,59 @@ export async function apiFetch<T>(
 
   const url = `${baseUrl}${cleanEndpoint}`;
 
-  const accessToken = localStorage.getItem('access_token');
+  let accessToken = localStorage.getItem('access_token');
 
-  const headers = new Headers(options.headers);
+  const makeRequest = async (
+    token: string | null
+  ): Promise<Response> => {
+    const headers = buildRequestHeaders(options, token);
 
-  headers.set('Accept', 'application/json');
+    try {
+      return await fetch(url, {
+        ...options,
+        headers,
+      });
+    } catch (err: any) {
+      throw new ApiNetworkError(
+        err?.message || 'Failed to connect to backend server'
+      );
+    }
+  };
 
-  // Send JWT for authenticated backend endpoints.
-  if (accessToken) {
-    headers.set('Authorization', `Bearer ${accessToken}`);
-  }
+  let response = await makeRequest(accessToken);
 
-  // JSON requests need Content-Type.
-  // FormData requests must NOT have Content-Type manually set because
-  // the browser adds the correct multipart boundary automatically.
-  if (options.body && !(options.body instanceof FormData)) {
-    headers.set('Content-Type', 'application/json');
-  }
+  /*
+   * If the JWT access token expired, refresh it automatically
+   * and retry the original request once.
+   */
+  if (response.status === 401 && accessToken) {
+  const newAccessToken = await refreshAccessToken();
 
-  let response: Response;
+  if (newAccessToken) {
+    accessToken = newAccessToken;
 
-  try {
-    response = await fetch(url, {
-      ...options,
-      headers,
-    });
-  } catch (err: any) {
-    throw new ApiNetworkError(
-      err?.message || 'Failed to connect to backend server'
+    // Retry the original request exactly once
+    // with the refreshed access token.
+    response = await makeRequest(accessToken);
+  } else {
+    const errorData = await parseErrorResponse(response);
+
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+
+    window.location.assign('/');
+
+    throw new ApiAuthError(
+      'Your session has expired. Please sign in again.',
+      401,
+      errorData
     );
   }
+}
 
   // Authentication / authorization errors.
   if (response.status === 401 || response.status === 403) {
-    let errorData: any = null;
-
-    try {
-      errorData = await response.json();
-    } catch {
-      // Ignore invalid/non-JSON error responses.
-    }
+    const errorData = await parseErrorResponse(response);
 
     const message =
       errorData?.detail ||
@@ -101,19 +206,15 @@ export async function apiFetch<T>(
 
   // Other API errors.
   if (!response.ok) {
-    let errorData: any = null;
-
-    try {
-      errorData = await response.json();
-    } catch {
-      // Ignore invalid/non-JSON error responses.
-    }
+    const errorData = await parseErrorResponse(response);
 
     const message =
       errorData?.detail ||
       errorData?.error?.detail ||
-      (typeof errorData?.error === 'string' ? errorData.error : undefined) ||
-      'Google Workspace authorization required. Please authenticate via BE1 Google OAuth.';
+      (typeof errorData?.error === 'string'
+        ? errorData.error
+        : undefined) ||
+      `Request failed with status ${response.status}: ${response.statusText}`;
 
     throw new ApiError(message, response.status, errorData);
   }

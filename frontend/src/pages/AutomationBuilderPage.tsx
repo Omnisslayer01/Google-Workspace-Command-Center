@@ -9,6 +9,7 @@ import {
   Save,
   CheckCircle2,
   AlertCircle,
+  History,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -294,7 +295,7 @@ export const AutomationBuilderPage: React.FC = () => {
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <div className="mx-auto max-w-6xl px-6 py-8">
         {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate('/dashboard')}
@@ -323,14 +324,25 @@ export const AutomationBuilderPage: React.FC = () => {
             </div>
           </div>
 
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <Save size={17} />
-            {isSaving ? 'Creating...' : 'Create Automation'}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate('/automations/history')}
+              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+            >
+              <History size={17} />
+              Execution History
+            </button>
+
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Save size={17} />
+              {isSaving ? 'Creating...' : 'Create Automation'}
+            </button>
+        </div>
         </div>
 
         {/* Messages */}

@@ -15,6 +15,7 @@ import { SheetsPage } from "./pages/SheetsPage";
 import { Concept5Workspace } from "./pages/Concept5Workspace";
 import { DrivePage } from "./pages/DrivePage";
 import { AutomationBuilderPage } from "./pages/AutomationBuilderPage";
+import { AutomationExecutionHistoryPage } from "./pages/AutomationExecutionHistoryPage";
 
 
 /**
@@ -116,6 +117,15 @@ export const App: React.FC = () => {
           element={
             <ProtectedRoute>
               <CalendarPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/automations/history"
+          element={
+            <ProtectedRoute>
+              <AutomationExecutionHistoryPage />
             </ProtectedRoute>
           }
         />
