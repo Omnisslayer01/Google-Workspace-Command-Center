@@ -1,7 +1,3 @@
-"""
-Django settings for config project.
-"""
-
 import os
 from pathlib import Path
 from datetime import timedelta
@@ -17,7 +13,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -25,19 +20,23 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
-
     'common',
     'accounts',
     'google_auth',
     'rbac',
     'audit',
+    'gmail_integration',
+    'notifications',
+    'corsheaders',
+    'sheets',
+    'automation',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -67,6 +66,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -91,6 +91,25 @@ USE_I18N = True
 
 USE_TZ = True
 
+
+
+MAILERS = {
+    'default': {
+        'BACKEND': os.getenv(
+            'EMAIL_BACKEND',
+            'django.core.mail.backends.console.EmailBackend',
+        ),
+        'HOST': os.getenv('EMAIL_HOST', 'smtp.gmail.com'),
+        'PORT': int(os.getenv('EMAIL_PORT', 587)),
+        'USE_TLS': os.getenv('EMAIL_USE_TLS', 'True') == 'True',
+        'USERNAME': os.getenv('EMAIL_HOST_USER', ''),
+        'PASSWORD': os.getenv('EMAIL_HOST_PASSWORD', ''),
+        'FROM_EMAIL': os.getenv('DEFAULT_FROM_EMAIL', 'noreply@gwcc.local'),
+    },
+}
+
+# Convenience alias used by Django's send_mail() helper and Celery tasks.
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@gwcc.local')
 
 STATIC_URL = 'static/'
 
@@ -151,3 +170,7 @@ LOGGING = {
         'level': 'INFO',
     },
 }
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+]

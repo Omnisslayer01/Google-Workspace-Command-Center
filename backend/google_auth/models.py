@@ -45,3 +45,4 @@ class GoogleCredential(models.Model):
 
     def __str__(self):
         return f"GoogleCredential({self.user.username})"
+

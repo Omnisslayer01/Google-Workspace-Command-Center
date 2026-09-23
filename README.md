@@ -1,0 +1,8 @@
+# Google Workspace Command Center (GWCC)
+
+## Backend Setup
+1. Activate virtual environment: `.\.venv\Scripts\Activate` (or `source .venv/bin/activate`)
+2. Navigate to backend: `cd backend`
+3. Install dependencies: `pip install -r requirements.txt`
+4. Run migrations: `python manage.py migrate`
+5. Start development server: `python manage.py runserver`

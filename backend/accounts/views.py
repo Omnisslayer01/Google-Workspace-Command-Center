@@ -53,3 +53,4 @@ class LogoutView(APIView):
                 {'success': False, 'error': 'Invalid or missing refresh token.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
