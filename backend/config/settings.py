@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     'accounts',
     'google_auth',
     'rbac',
+    'audit',
 ]
 
 MIDDLEWARE = [

@@ -16,6 +16,7 @@ from .services import (
     revoke_google_token,
 )
 from .models import GoogleCredential
+from audit.services import log_action
 
 
 class GoogleConnectView(APIView):
@@ -146,14 +147,16 @@ class GoogleDisconnectView(APIView):
         if token_to_revoke:
             revoked = revoke_google_token(token_to_revoke)
 
+        log_action(
+            user=request.user,
+            action='google_disconnect',
+            target=cred_obj,
+            metadata={'google_revoke_confirmed': revoked},
+        )
+
+
        
         cred_obj.delete()
-
-         # TODO: Pause or cancel any Celery automations tied to this user
-        # so nothing keeps running against a dead credential.
-        # cancel_user_google_automations(request.user.id)
-
-        
 
         return Response({
             'success': True,
