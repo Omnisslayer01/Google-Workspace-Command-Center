@@ -10,6 +10,7 @@ import {
   X,
   Layers,
   HardDrive,
+  Zap,
 } from 'lucide-react';
 import { MOCK_NOTIFICATIONS } from '../../data/mockData';
 
@@ -31,6 +32,7 @@ export const Header: React.FC<HeaderProps> = ({
   { to: '/tasks', label: 'Tasks', icon: CheckSquare },
   { to: '/drive', label: 'Drive', icon: HardDrive },
   { to: '/sheets', label: 'Sheets', icon: Table },
+  { to: '/automations/new', label: 'Automation', icon: Zap },
 ];
 
   return (

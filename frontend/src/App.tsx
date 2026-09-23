@@ -14,6 +14,7 @@ import { TasksPage } from "./pages/TasksPage";
 import { SheetsPage } from "./pages/SheetsPage";
 import { Concept5Workspace } from "./pages/Concept5Workspace";
 import { DrivePage } from "./pages/DrivePage";
+import { AutomationBuilderPage } from "./pages/AutomationBuilderPage";
 
 
 /**
@@ -120,6 +121,11 @@ export const App: React.FC = () => {
         />
 
         <Route path="/drive" element={<DrivePage />} />
+
+        <Route
+          path="/automations/new"
+          element={<AutomationBuilderPage />}
+        />
 
         <Route
           path="/tasks"
