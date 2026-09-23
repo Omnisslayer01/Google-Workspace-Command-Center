@@ -9,6 +9,7 @@ import {
   Menu,
   X,
   Layers,
+  HardDrive,
 } from 'lucide-react';
 import { MOCK_NOTIFICATIONS } from '../../data/mockData';
 
@@ -25,11 +26,12 @@ export const Header: React.FC<HeaderProps> = ({
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
 
   const navItems = [
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { to: '/calendar', label: 'Calendar', icon: CalendarDays },
-    { to: '/tasks', label: 'Tasks', icon: CheckSquare },
-    { to: '/sheets', label: 'Sheets', icon: Table },
-  ];
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/calendar', label: 'Calendar', icon: CalendarDays },
+  { to: '/tasks', label: 'Tasks', icon: CheckSquare },
+  { to: '/drive', label: 'Drive', icon: HardDrive },
+  { to: '/sheets', label: 'Sheets', icon: Table },
+];
 
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-slate-200">

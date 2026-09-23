@@ -11,7 +11,11 @@ export class ApiError extends Error {
 }
 
 export class ApiAuthError extends ApiError {
-  constructor(message: string = 'Google Calendar authorization is required or has expired.', status: number = 401, data?: any) {
+  constructor(
+    message: string = 'Google Workspace authorization is required or has expired.',
+    status: number = 401,
+    data?: any
+  ) {
     super(message, status, data);
     this.name = 'ApiAuthError';
   }
@@ -26,9 +30,11 @@ export class ApiNetworkError extends ApiError {
 
 const getBaseUrl = (): string => {
   const envUrl = import.meta.env.VITE_API_BASE_URL;
+
   if (envUrl && typeof envUrl === 'string' && envUrl.trim().length > 0) {
     return envUrl.replace(/\/+$/, '');
   }
+
   return '';
 };
 
@@ -37,55 +43,82 @@ export async function apiFetch<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const baseUrl = getBaseUrl();
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+
+  const cleanEndpoint = endpoint.startsWith('/')
+    ? endpoint
+    : `/${endpoint}`;
+
   const url = `${baseUrl}${cleanEndpoint}`;
 
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    Accept: 'application/json',
-    ...options.headers,
-  };
+  const accessToken = localStorage.getItem('access_token');
+
+  const headers = new Headers(options.headers);
+
+  headers.set('Accept', 'application/json');
+
+  // Send JWT for authenticated backend endpoints.
+  if (accessToken) {
+    headers.set('Authorization', `Bearer ${accessToken}`);
+  }
+
+  // JSON requests need Content-Type.
+  // FormData requests must NOT have Content-Type manually set because
+  // the browser adds the correct multipart boundary automatically.
+  if (options.body && !(options.body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json');
+  }
 
   let response: Response;
+
   try {
     response = await fetch(url, {
       ...options,
       headers,
     });
   } catch (err: any) {
-    // Network fetch failure (e.g. backend server not running / connection refused)
-    throw new ApiNetworkError(err?.message || 'Failed to connect to backend server');
+    throw new ApiNetworkError(
+      err?.message || 'Failed to connect to backend server'
+    );
   }
 
-  // Check 401 / 403 authorization specifically
+  // Authentication / authorization errors.
   if (response.status === 401 || response.status === 403) {
     let errorData: any = null;
+
     try {
       errorData = await response.json();
     } catch {
-      // ignore
+      // Ignore invalid/non-JSON error responses.
     }
-    const msg =
+
+    const message =
       errorData?.detail ||
       errorData?.error ||
       'Google Workspace authorization required. Please authenticate via BE1 Google OAuth.';
-    throw new ApiAuthError(msg, response.status, errorData);
+
+    throw new ApiAuthError(message, response.status, errorData);
   }
 
+  // Other API errors.
   if (!response.ok) {
     let errorData: any = null;
+
     try {
       errorData = await response.json();
     } catch {
-      // ignore
+      // Ignore invalid/non-JSON error responses.
     }
-    const msg =
+
+    const message =
       errorData?.detail ||
-      errorData?.message ||
-      `Request failed with status ${response.status}: ${response.statusText}`;
-    throw new ApiError(msg, response.status, errorData);
+      errorData?.error?.detail ||
+      (typeof errorData?.error === 'string' ? errorData.error : undefined) ||
+      'Google Workspace authorization required. Please authenticate via BE1 Google OAuth.';
+
+    throw new ApiError(message, response.status, errorData);
   }
 
+  // No content response.
   if (response.status === 204) {
     return {} as T;
   }

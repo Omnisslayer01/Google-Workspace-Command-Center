@@ -13,6 +13,8 @@ import { CalendarPage } from "./pages/CalendarPage";
 import { TasksPage } from "./pages/TasksPage";
 import { SheetsPage } from "./pages/SheetsPage";
 import { Concept5Workspace } from "./pages/Concept5Workspace";
+import { DrivePage } from "./pages/DrivePage";
+
 
 /**
  * Handles the Google OAuth callback.
@@ -116,6 +118,8 @@ export const App: React.FC = () => {
             </ProtectedRoute>
           }
         />
+
+        <Route path="/drive" element={<DrivePage />} />
 
         <Route
           path="/tasks"
