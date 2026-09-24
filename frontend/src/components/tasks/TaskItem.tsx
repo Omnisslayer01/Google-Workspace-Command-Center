@@ -5,11 +5,6 @@ import {
   Clock,
   Edit2,
   Trash2,
-  User,
-  Calendar,
-  Mail,
-  HardDrive,
-  Table,
 } from 'lucide-react';
 
 interface TaskItemProps {
@@ -27,20 +22,6 @@ export const TaskItem: React.FC<TaskItemProps> = ({
 }) => {
   const isCompleted = task.status === 'completed';
 
-  const priorityConfig = {
-    urgent: { label: 'Urgent', class: 'bg-red-50 text-red-700 border-red-200' },
-    high: { label: 'High', class: 'bg-amber-50 text-amber-700 border-amber-200' },
-    medium: { label: 'Medium', class: 'bg-blue-50 text-blue-700 border-blue-200' },
-    low: { label: 'Low', class: 'bg-slate-100 text-slate-700 border-slate-200' },
-  }[task.priority] || { label: task.priority, class: 'bg-slate-100 text-slate-700' };
-
-  const serviceConfig = {
-    gmail: { name: 'Gmail', icon: Mail, color: 'text-[#EA4335] bg-red-50 border-red-200' },
-    calendar: { name: 'Calendar', icon: Calendar, color: 'text-[#4285F4] bg-blue-50 border-blue-200' },
-    drive: { name: 'Drive', icon: HardDrive, color: 'text-[#b45309] bg-amber-50 border-amber-200' },
-    sheets: { name: 'Sheets', icon: Table, color: 'text-[#34A853] bg-emerald-50 border-emerald-200' },
-  }[task.service || 'calendar'];
-
   const formatDueDate = (isoString?: string) => {
     if (!isoString) return null;
     try {
@@ -50,8 +31,6 @@ export const TaskItem: React.FC<TaskItemProps> = ({
       return null;
     }
   };
-
-  const ServiceIcon = serviceConfig?.icon;
 
   return (
     <div
@@ -85,23 +64,6 @@ export const TaskItem: React.FC<TaskItemProps> = ({
             >
               {task.title}
             </span>
-
-            {/* Priority Chip */}
-            <span
-              className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded border ${priorityConfig.class}`}
-            >
-              {priorityConfig.label}
-            </span>
-
-            {/* Service Association Chip */}
-            {task.service && serviceConfig && ServiceIcon && (
-              <span
-                className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded border ${serviceConfig.color}`}
-              >
-                <ServiceIcon className="w-3 h-3" />
-                <span>{serviceConfig.name}</span>
-              </span>
-            )}
           </div>
 
           {task.description && (
@@ -110,19 +72,12 @@ export const TaskItem: React.FC<TaskItemProps> = ({
             </p>
           )}
 
-          {/* Metadata Row: Due Date & Assignee */}
+          {/* Metadata Row: Due Date */}
           <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px] text-slate-500 font-mono">
-            {task.dueDate && (
+            {task.due_date && (
               <span className="flex items-center gap-1 text-slate-600">
                 <Clock className="w-3 h-3 text-slate-400" />
-                <span>Due: {formatDueDate(task.dueDate)}</span>
-              </span>
-            )}
-
-            {task.assignedTo && (
-              <span className="flex items-center gap-1">
-                <User className="w-3 h-3 text-slate-400" />
-                <span>Assignee: {task.assignedTo}</span>
+                <span>Due: {formatDueDate(task.due_date)}</span>
               </span>
             )}
 

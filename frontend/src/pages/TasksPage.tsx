@@ -3,7 +3,7 @@ import { Header } from '../components/common/Header';
 import { TaskItem } from '../components/tasks/TaskItem';
 import { TaskModal } from '../components/tasks/TaskModal';
 import { tasksApi } from '../lib/tasksApi';
-import { WorkspaceTask, TaskCreateInput, TaskPriority, TaskStatus } from '../types';
+import { WorkspaceTask, TaskCreateInput, TaskStatus } from '../types';
 import { MOCK_TASKS } from '../data/mockData';
 import {
   CheckSquare,
@@ -11,8 +11,6 @@ import {
   Search,
   CheckCircle2,
   Clock,
-  AlertCircle,
-  Filter,
 } from 'lucide-react';
 
 export const TasksPage: React.FC = () => {
@@ -22,7 +20,7 @@ export const TasksPage: React.FC = () => {
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<'all' | TaskStatus>('all');
-  const [priorityFilter, setPriorityFilter] = useState<'all' | TaskPriority>('all');
+
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
@@ -80,7 +78,7 @@ export const TasksPage: React.FC = () => {
   const filteredTasks = useMemo(() => {
     return tasks.filter((t) => {
       if (statusFilter !== 'all' && t.status !== statusFilter) return false;
-      if (priorityFilter !== 'all' && t.priority !== priorityFilter) return false;
+
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchTitle = t.title.toLowerCase().includes(q);
@@ -89,14 +87,14 @@ export const TasksPage: React.FC = () => {
       }
       return true;
     });
-  }, [tasks, statusFilter, priorityFilter, searchQuery]);
+  }, [tasks, statusFilter, searchQuery]);
 
   // Statistics
   const totalCount = tasks.length;
   const todoCount = tasks.filter((t) => t.status === 'todo').length;
   const inProgressCount = tasks.filter((t) => t.status === 'in_progress').length;
   const completedCount = tasks.filter((t) => t.status === 'completed').length;
-  const urgentCount = tasks.filter((t) => t.priority === 'urgent' && t.status !== 'completed').length;
+
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col selection:bg-[#34A853] selection:text-white">
@@ -162,14 +160,7 @@ export const TasksPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs">
-            <div className="flex items-center justify-between text-xs text-slate-500 font-mono mb-1">
-              <span>URGENT ATTENTION</span>
-              <AlertCircle className="w-3.5 h-3.5 text-[#EA4335]" />
-            </div>
-            <div className="text-2xl font-bold text-[#EA4335] font-mono">{urgentCount}</div>
-            <div className="text-[11px] text-slate-500 mt-0.5">Critical priority queue</div>
-          </div>
+
         </div>
 
         {/* Filter Bar */}
@@ -205,20 +196,7 @@ export const TasksPage: React.FC = () => {
               />
             </div>
 
-            <div className="flex items-center gap-1.5 text-xs text-slate-600">
-              <Filter className="w-3.5 h-3.5 text-slate-400" />
-              <select
-                value={priorityFilter}
-                onChange={(e) => setPriorityFilter(e.target.value as any)}
-                className="px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs text-slate-900 focus:ring-2 focus:ring-[#34A853]"
-              >
-                <option value="all">All Priorities</option>
-                <option value="urgent">Urgent</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-              </select>
-            </div>
+
           </div>
         </div>
 

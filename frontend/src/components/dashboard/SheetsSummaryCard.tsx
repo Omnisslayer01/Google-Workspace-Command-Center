@@ -1,10 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Table, ArrowRight, TrendingUp, CheckCircle } from 'lucide-react';
-import { MOCK_SPREADSHEETS } from '../../data/mockData';
+import { SpreadsheetItem } from '../../types';
 
-export const SheetsSummaryCard: React.FC = () => {
-  const activeSheet = MOCK_SPREADSHEETS[0];
+interface SheetsSummaryCardProps {
+  sheets: SpreadsheetItem[];
+}
+
+export const SheetsSummaryCard: React.FC<SheetsSummaryCardProps> = ({ sheets }) => {
+  const activeSheet = sheets && sheets.length > 0 ? sheets[0] : null;
   const primaryWs = activeSheet?.worksheets[0];
 
   return (

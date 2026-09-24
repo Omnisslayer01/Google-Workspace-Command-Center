@@ -112,12 +112,13 @@ def get_google_client(user):
 
     expiry = cred_obj.token_expiry
 
-    # Convert naive database datetime to timezone-aware UTC
-    if expiry and timezone.is_naive(expiry):
-        expiry = timezone.make_aware(
-            expiry,
-            dt_timezone.utc
-        )
+    aware_expiry = expiry
+    if aware_expiry and timezone.is_naive(aware_expiry):
+        aware_expiry = timezone.make_aware(aware_expiry, dt_timezone.utc)
+
+    naive_expiry = expiry
+    if naive_expiry and timezone.is_aware(naive_expiry):
+        naive_expiry = timezone.make_naive(naive_expiry, dt_timezone.utc)
 
     credentials = Credentials(
         token=access_token,
@@ -130,13 +131,11 @@ def get_google_client(user):
             if cred_obj.granted_scopes
             else GOOGLE_SCOPES
         ),
-        expiry=expiry,
+        expiry=naive_expiry,
     )
 
     # Manually check token expiry
-    # We don't use credentials.valid because of the
-    # timezone compatibility issue in the installed google-auth version.
-    if expiry and timezone.now() >= expiry:
+    if aware_expiry and timezone.now() >= aware_expiry:
 
         credentials.refresh(
             GoogleAuthRequest()

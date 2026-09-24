@@ -40,9 +40,11 @@ export async function apiFetch<T>(
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   const url = `${baseUrl}${cleanEndpoint}`;
 
+  const accessToken = localStorage.getItem('access_token');
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     Accept: 'application/json',
+    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
     ...options.headers,
   };
 

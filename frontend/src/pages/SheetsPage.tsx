@@ -32,11 +32,13 @@ export const SheetsPage: React.FC = () => {
       const res = await sheetsApi.getSpreadsheets();
       setSpreadsheets(res.data);
       if (res.data.length > 0) {
-        const sheet = res.data.find((s) => s.id === selectedSpreadsheetId) || res.data[0];
-        setSelectedSpreadsheetId(sheet.id);
-        const ws = sheet.worksheets.find((w) => w.id === selectedWorksheetId) || sheet.worksheets[0];
-        setSelectedWorksheetId(ws.id);
-        setActiveWorksheet(ws);
+        let defaultSheetId = selectedSpreadsheetId;
+        if (!res.data.find(s => s.id === defaultSheetId)) {
+          defaultSheetId = res.data[0].id;
+        }
+        await handleSelectSpreadsheet(defaultSheetId, res.data);
+      } else {
+         setActiveWorksheet(null);
       }
     } catch (err) {
       console.error('Failed to load spreadsheets:', err);
@@ -45,13 +47,26 @@ export const SheetsPage: React.FC = () => {
     }
   };
 
-  const handleSelectSpreadsheet = (sheetId: string) => {
+  const handleSelectSpreadsheet = async (sheetId: string, currentSheets = spreadsheets) => {
     setSelectedSpreadsheetId(sheetId);
-    const sheet = spreadsheets.find((s) => s.id === sheetId);
-    if (sheet && sheet.worksheets.length > 0) {
-      const firstWs = sheet.worksheets[0];
-      setSelectedWorksheetId(firstWs.id);
-      setActiveWorksheet(firstWs);
+    setLoading(true);
+    try {
+      const fullSheet = await sheetsApi.getSpreadsheet(sheetId);
+      if (fullSheet && fullSheet.worksheets.length > 0) {
+        setSpreadsheets(prev => {
+          const list = prev.length > 0 ? prev : currentSheets;
+          return list.map(s => s.id === sheetId ? { ...s, worksheets: fullSheet.worksheets } : s)
+        });
+        const firstWs = fullSheet.worksheets[0];
+        setSelectedWorksheetId(firstWs.id);
+        setActiveWorksheet(firstWs);
+      } else {
+        setActiveWorksheet(null);
+      }
+    } catch (err) {
+      console.error('Failed to fetch sheet metadata', err);
+    } finally {
+      setLoading(false);
     }
   };
 

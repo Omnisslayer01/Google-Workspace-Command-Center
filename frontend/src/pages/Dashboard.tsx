@@ -17,13 +17,15 @@ import { AutomationActivityCard } from '../components/dashboard/AutomationActivi
 import { AuditActivityFeed } from '../components/dashboard/AuditActivityFeed';
 import { calendarApi } from '../lib/calendarApi';
 import { tasksApi } from '../lib/tasksApi';
-import { CalendarEvent, WorkspaceTask } from '../types';
+import { sheetsApi } from '../lib/sheetsApi';
+import { CalendarEvent, WorkspaceTask, SpreadsheetItem } from '../types';
 import { MOCK_DRIVE_FILES, MOCK_CALENDAR_EVENTS, MOCK_TASKS } from '../data/mockData';
 import { ApiAuthError } from '../lib/apiClient';
 
 export const Dashboard: React.FC = () => {
   const [events, setEvents] = useState<CalendarEvent[]>(MOCK_CALENDAR_EVENTS);
   const [tasks, setTasks] = useState<WorkspaceTask[]>(MOCK_TASKS);
+  const [sheets, setSheets] = useState<SpreadsheetItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [dataSource, setDataSource] = useState<'live' | 'mock' | 'adapter'>('mock');
@@ -56,6 +58,22 @@ export const Dashboard: React.FC = () => {
       setTasks(tasksResult.data);
     } catch (err) {
       console.error('Failed to load tasks:', err);
+    }
+
+    // 3. Fetch Sheets (real API)
+    try {
+      const sheetsResult = await sheetsApi.getSpreadsheets();
+      // To show mock metrics in the dashboard, we might want to fetch full sheet data if needed,
+      // but for now, we just pass the empty worksheets or fetch the first one.
+      if (sheetsResult.data.length > 0) {
+        const fullSheet = await sheetsApi.getSpreadsheet(sheetsResult.data[0].id);
+        if (fullSheet) {
+          sheetsResult.data[0] = fullSheet;
+        }
+      }
+      setSheets(sheetsResult.data);
+    } catch (err) {
+      console.error('Failed to load sheets:', err);
     }
 
     setLoading(false);
@@ -176,7 +194,7 @@ export const Dashboard: React.FC = () => {
             <RecentDriveFilesCard files={MOCK_DRIVE_FILES} />
           </div>
           <div className="lg:col-span-6">
-            <SheetsSummaryCard />
+            <SheetsSummaryCard sheets={sheets} />
           </div>
         </section>
 

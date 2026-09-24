@@ -118,6 +118,8 @@ class GoogleCallbackView(APIView):
             return redirect(frontend_redirect)
 
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             # If anything crashes, send them back to login with an error
             return redirect(f"{frontend_url_base}/login?error=google_auth_failed")
 

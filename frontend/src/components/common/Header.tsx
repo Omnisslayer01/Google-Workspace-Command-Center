@@ -25,7 +25,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
 
   const navItems = [
-    { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/calendar', label: 'Calendar', icon: CalendarDays },
     { to: '/tasks', label: 'Tasks', icon: CheckSquare },
     { to: '/sheets', label: 'Sheets', icon: Table },
