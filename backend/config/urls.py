@@ -9,13 +9,14 @@ urlpatterns = [
         include("calendar_integration.urls"),
     ),
     path('api/rbac/', include('rbac.urls')),
-    
-    # Google OAuth endpoints
+    path('api/audit/', include('audit.urls')),
+
+    # 1. Send /api/auth/google/... traffic to Madhura's app FIRST
     path('api/auth/google/', include('google_auth.urls')),
-    
-    # General authentication endpoints
-    path('api/auth/', include('accounts.urls')), 
-    
+
+    # 2. Send the rest of /api/auth/... traffic to Jay's accounts app
+    path('api/auth/', include('accounts.urls')),
+
     # Gmail API endpoints
     path("api/gmail/", include("gmail_integration.urls")),
 

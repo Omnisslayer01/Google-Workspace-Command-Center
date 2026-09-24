@@ -43,14 +43,14 @@ INSTALLED_APPS = [
     'accounts',
     'google_auth',
     'rbac',
-    'gmail_integration',    
+    'audit',
+    'gmail_integration',
     'calendar_integration',
     'notifications',
     'corsheaders',
     'sheets',
     'automation',
     'drive',
-
 ]
 
 MIDDLEWARE = [

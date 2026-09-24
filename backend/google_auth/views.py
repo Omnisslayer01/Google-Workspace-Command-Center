@@ -1,9 +1,11 @@
 import json
+
 import requests
 from django.shortcuts import redirect
 from django.conf import settings
 from django.core import signing
 from django.contrib.auth import get_user_model
+
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -18,8 +20,12 @@ from .services import (
     revoke_google_token,
 )
 from .models import GoogleCredential
+from notifications.models import Notification
+from automation.models import Automation
+from audit.services import log_action
 
 User = get_user_model()
+
 
 class GoogleConnectView(APIView):
     permission_classes = [AllowAny]
@@ -40,12 +46,13 @@ class GoogleConnectView(APIView):
             prompt='consent',
             state=state
         )
-        
-        # 🚨 FIX APPLIED: Renamed to 'auth_url' so Jay's frontend can read it!
+
+        # Renamed to 'auth_url' so Jay's frontend can read it
         return Response({
             'success': True,
-            'auth_url': authorization_url, 
+            'auth_url': authorization_url,
         })
+
 
 class GoogleCallbackView(APIView):
     permission_classes = [AllowAny]
@@ -59,6 +66,7 @@ class GoogleCallbackView(APIView):
         
         if not code:
             return Response({'error': 'Missing authorization code.'}, status=400)
+
         
         try:
             # 1. Exchange the code for Google credentials
@@ -146,15 +154,72 @@ class GoogleDisconnectView(APIView):
         if token_to_revoke:
             revoked = revoke_google_token(token_to_revoke)
 
-        cred_obj.delete()
+        log_action(
+            user=request.user,
+            action='google_disconnect',
+            target=cred_obj,
+            metadata={'google_revoke_confirmed': revoked},
+        )
 
-        # TODO (Future): Pause or cancel any Celery automations tied to this user
-        # It will probably be provided by another programmer in the future.
-        # so nothing keeps running against a dead credential.
-        # cancel_user_google_automations(request.user.id)
+        cred_obj.delete()
 
         return Response({
             'success': True,
             'message': 'Google account disconnected successfully.',
             'google_revoke_confirmed': revoked,
+        })
+
+
+class AccountDeleteView(APIView):
+    """
+    /api/account/delete/ — deletes the user's in-app data,
+    including Google credentials, automations, and notifications.
+    """
+
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request):
+        user = request.user
+
+        # 1. Revoke and delete Google credential, if any
+        google_revoked = False
+
+        try:
+            cred_obj = GoogleCredential.objects.get(user=user)
+
+            token_to_revoke = (
+                decrypt_token(cred_obj.refresh_token)
+                or decrypt_token(cred_obj.access_token)
+            )
+
+            if token_to_revoke:
+                google_revoked = revoke_google_token(token_to_revoke)
+
+            cred_obj.delete()
+
+        except GoogleCredential.DoesNotExist:
+            pass
+
+        # 2. Delete this user's automations
+        automations_count, _ = Automation.objects.filter(owner=user).delete()
+
+        # 3. Delete this user's notifications
+        notifications_count, _ = Notification.objects.filter(user=user).delete()
+
+        # 4. Log the deletion before the user data is removed
+        log_action(
+            user=user,
+            action='account_data_deleted',
+            target=None,
+            metadata={
+                'google_revoke_confirmed': google_revoked,
+                'automations_deleted': automations_count,
+                'notifications_deleted': notifications_count,
+            },
+        )
+
+        return Response({
+            'success': True,
+            'message': 'Your account data has been deleted.',
+            'google_revoke_confirmed': google_revoked,
         })
