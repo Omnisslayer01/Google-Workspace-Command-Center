@@ -15,4 +15,4 @@ db.sqlite3
 # OS/IDE junk
 .DS_Store
 .vscode/
-
+celerybeat-schedule
