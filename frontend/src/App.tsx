@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { AuditActivityLogPage } from "./pages/AuditActivityLogPage";
 import {
   BrowserRouter,
   Routes,
@@ -108,6 +109,15 @@ export const App: React.FC = () => {
           element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/audit"
+          element={
+            <ProtectedRoute>
+              <AuditActivityLogPage />
             </ProtectedRoute>
           }
         />

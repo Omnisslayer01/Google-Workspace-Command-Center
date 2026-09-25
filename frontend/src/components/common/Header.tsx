@@ -12,6 +12,7 @@ import {
   HardDrive,
   Zap,
   History,
+  Activity,
 } from 'lucide-react';
 import { MOCK_NOTIFICATIONS } from '../../data/mockData';
 
@@ -35,6 +36,7 @@ export const Header: React.FC<HeaderProps> = ({
   { to: '/sheets', label: 'Sheets', icon: Table },
   { to: '/automations/new', label: 'Automation', icon: Zap },
   { to: '/automations/history', label: 'History', icon: History },
+  { to: '/audit', label: 'Audit Log', icon: Activity },
 ];
 
   return (
