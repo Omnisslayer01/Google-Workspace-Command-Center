@@ -171,6 +171,7 @@ class CalendarService:
             .insert(
                 calendarId="primary",
                 body=event,
+                conferenceDataVersion=1,
             )
         )
 

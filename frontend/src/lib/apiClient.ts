@@ -168,29 +168,29 @@ export async function apiFetch<T>(
    * and retry the original request once.
    */
   if (response.status === 401 && accessToken) {
-  const newAccessToken = await refreshAccessToken();
+    const newAccessToken = await refreshAccessToken();
 
-  if (newAccessToken) {
-    accessToken = newAccessToken;
+    if (newAccessToken) {
+      accessToken = newAccessToken;
 
-    // Retry the original request exactly once
-    // with the refreshed access token.
-    response = await makeRequest(accessToken);
-  } else {
-    const errorData = await parseErrorResponse(response);
+      // Retry the original request exactly once
+      // with the refreshed access token.
+      response = await makeRequest(accessToken);
+    } else {
+      const errorData = await parseErrorResponse(response);
 
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
 
-    window.location.assign('/');
+      window.location.assign('/');
 
-    throw new ApiAuthError(
-      'Your session has expired. Please sign in again.',
-      401,
-      errorData
-    );
+      throw new ApiAuthError(
+        'Your session has expired. Please sign in again.',
+        401,
+        errorData
+      );
+    }
   }
-}
 
   // Authentication / authorization errors.
   if (response.status === 401 || response.status === 403) {

@@ -200,6 +200,7 @@ def get_google_client(user):
 
     return credentials
 
+
 def revoke_google_token(token):
     """
     Google kade jaun dilela token (access kinva refresh) revoke karto.

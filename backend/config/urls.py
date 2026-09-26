@@ -31,4 +31,7 @@ urlpatterns = [
 
     # automation model added 
     path("api/automations/", include("automation.urls")),
+
+    # Internal Tasks API
+    path("api/tasks/", include("tasks.urls")),
 ]

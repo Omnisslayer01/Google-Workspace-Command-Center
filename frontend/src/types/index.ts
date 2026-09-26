@@ -69,7 +69,6 @@ export interface CalendarConflict {
 // ==========================================
 // 2. Tasks Interfaces
 // ==========================================
-export type TaskPriority = 'urgent' | 'high' | 'medium' | 'low';
 export type TaskStatus = 'todo' | 'in_progress' | 'completed';
 
 export interface WorkspaceTask {
@@ -77,32 +76,24 @@ export interface WorkspaceTask {
   title: string;
   description?: string;
   status: TaskStatus;
-  priority: TaskPriority;
-  dueDate?: string;
-  service?: WorkspaceService;
-  assignedTo?: string;
-  createdAt: string;
-  updatedAt: string;
+  due_date?: string;
+  created_by_automation?: number | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface TaskCreateInput {
   title: string;
   description?: string;
-  priority: TaskPriority;
   status?: TaskStatus;
-  dueDate?: string;
-  service?: WorkspaceService;
-  assignedTo?: string;
+  due_date?: string;
 }
 
 export interface TaskUpdateInput {
   title?: string;
   description?: string;
   status?: TaskStatus;
-  priority?: TaskPriority;
-  dueDate?: string;
-  service?: WorkspaceService;
-  assignedTo?: string;
+  due_date?: string;
 }
 
 // ==========================================

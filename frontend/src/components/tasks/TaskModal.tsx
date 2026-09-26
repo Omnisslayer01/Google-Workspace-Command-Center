@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { WorkspaceTask, TaskCreateInput, TaskPriority, TaskStatus, WorkspaceService } from '../../types';
+import { WorkspaceTask, TaskCreateInput, TaskStatus } from '../../types';
 import { X, CheckSquare, Check } from 'lucide-react';
 
 interface TaskModalProps {
@@ -17,11 +17,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [priority, setPriority] = useState<TaskPriority>('medium');
   const [status, setStatus] = useState<TaskStatus>('todo');
-  const [service, setService] = useState<WorkspaceService>('calendar');
   const [dueDate, setDueDate] = useState('');
-  const [assignedTo, setAssignedTo] = useState('Yash');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,21 +28,15 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     if (initialTask) {
       setTitle(initialTask.title);
       setDescription(initialTask.description || '');
-      setPriority(initialTask.priority);
       setStatus(initialTask.status);
-      setService(initialTask.service || 'calendar');
-      setDueDate(initialTask.dueDate ? initialTask.dueDate.slice(0, 10) : '');
-      setAssignedTo(initialTask.assignedTo || 'Yash');
+      setDueDate(initialTask.due_date ? initialTask.due_date.slice(0, 10) : '');
     } else {
       setTitle('');
       setDescription('');
-      setPriority('medium');
       setStatus('todo');
-      setService('calendar');
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       setDueDate(tomorrow.toISOString().slice(0, 10));
-      setAssignedTo('Yash');
     }
     setError(null);
   }, [isOpen, initialTask]);
@@ -64,11 +55,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       await onSave({
         title: title.trim(),
         description: description.trim() || undefined,
-        priority,
         status,
-        service,
-        dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
-        assignedTo,
+        due_date: dueDate ? new Date(dueDate).toISOString() : undefined,
       });
       onClose();
     } catch (err: any) {
@@ -125,22 +113,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block font-semibold text-slate-700 mb-1">
-                Priority
-              </label>
-              <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as TaskPriority)}
-                className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs text-slate-900 focus:ring-2 focus:ring-[#34A853]"
-              >
-                <option value="urgent">Urgent</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">
                 Status
               </label>
               <select
@@ -151,24 +123,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 <option value="todo">To Do</option>
                 <option value="in_progress">In Progress</option>
                 <option value="completed">Completed</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">
-                Google Service
-              </label>
-              <select
-                value={service}
-                onChange={(e) => setService(e.target.value as WorkspaceService)}
-                className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs text-slate-900 focus:ring-2 focus:ring-[#34A853]"
-              >
-                <option value="gmail">Gmail</option>
-                <option value="calendar">Calendar</option>
-                <option value="drive">Drive</option>
-                <option value="sheets">Sheets</option>
               </select>
             </div>
 
@@ -183,19 +137,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs text-slate-900 focus:ring-2 focus:ring-[#34A853] font-mono"
               />
             </div>
-          </div>
-
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">
-              Assignee
-            </label>
-            <input
-              type="text"
-              value={assignedTo}
-              onChange={(e) => setAssignedTo(e.target.value)}
-              placeholder="e.g. Yash, Sarah Chen"
-              className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs text-slate-900 focus:ring-2 focus:ring-[#34A853]"
-            />
           </div>
 
           <div>

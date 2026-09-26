@@ -28,16 +28,21 @@ export const Header: React.FC<HeaderProps> = ({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
 
-  const navItems = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/calendar', label: 'Calendar', icon: CalendarDays },
-  { to: '/tasks', label: 'Tasks', icon: CheckSquare },
-  { to: '/drive', label: 'Drive', icon: HardDrive },
-  { to: '/sheets', label: 'Sheets', icon: Table },
-  { to: '/automations/new', label: 'Automation', icon: Zap },
-  { to: '/automations/history', label: 'History', icon: History },
-  { to: '/audit', label: 'Audit Log', icon: Activity },
-];
+    const navItems = [
+    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/calendar', label: 'Calendar', icon: CalendarDays },
+    { to: '/tasks', label: 'Tasks', icon: CheckSquare },
+    { to: '/drive', label: 'Drive', icon: HardDrive },
+    { to: '/sheets', label: 'Sheets', icon: Table },
+    { to: '/automations/new', label: 'Automation', icon: Zap },
+    { to: '/automations/history', label: 'History', icon: History },
+    { to: '/audit', label: 'Audit Log', icon: Activity },
+    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/calendar', label: 'Calendar', icon: CalendarDays },
+    { to: '/tasks', label: 'Tasks', icon: CheckSquare },
+    { to: '/sheets', label: 'Sheets', icon: Table },
+  ];
+
 
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-slate-200">

@@ -6,7 +6,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(BASE_DIR / ".env")
+load_dotenv(BASE_DIR / ".env", override=True)
+import os
+os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 SECRET_KEY = 'django-insecure-change-this-key-later-mkjh38dksn29xks-devonly'
@@ -51,7 +53,10 @@ INSTALLED_APPS = [
     'sheets',
     'automation',
     'drive',
+    'tasks',
 ]
+
+
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
