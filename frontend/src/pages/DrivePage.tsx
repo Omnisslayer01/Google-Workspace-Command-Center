@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+
 import {
   AlertCircle,
   ArrowLeft,
@@ -14,24 +15,33 @@ import {
   Search,
   Upload,
 } from 'lucide-react';
+
 import { Header } from '../components/common/Header';
+
 import {
-  getDriveDownloadUrl,
   listDriveFiles,
   uploadDriveFile,
+  saveDriveFile,
 } from '../lib/driveApi';
+
 import type { DriveFileItem } from '../types';
 
 const getFileIcon = (type: DriveFileItem['type']) => {
   switch (type) {
     case 'folder':
       return <Folder className="h-5 w-5 text-[#FBBC04]" />;
+
     case 'spreadsheet':
-      return <FileSpreadsheet className="h-5 w-5 text-[#34A853]" />;
+      return (
+        <FileSpreadsheet className="h-5 w-5 text-[#34A853]" />
+      );
+
     case 'document':
       return <FileText className="h-5 w-5 text-[#4285F4]" />;
+
     case 'pdf':
       return <File className="h-5 w-5 text-[#EA4335]" />;
+
     default:
       return <File className="h-5 w-5 text-slate-500" />;
   }
@@ -39,41 +49,77 @@ const getFileIcon = (type: DriveFileItem['type']) => {
 
 export const DrivePage: React.FC = () => {
   const [files, setFiles] = useState<DriveFileItem[]>([]);
+
   const [folderStack, setFolderStack] = useState<
     Array<{ id?: string; name: string }>
   >([{ name: 'My Drive' }]);
 
   const [search, setSearch] = useState('');
+
   const [loading, setLoading] = useState(true);
+
   const [uploading, setUploading] = useState(false);
+
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
   const [error, setError] = useState('');
 
   const currentFolder = folderStack[folderStack.length - 1];
 
-  const loadFiles = async () => {
+  /**
+   * Load files from the current Google Drive folder.
+   */
+  const loadFiles = useCallback(async () => {
     setLoading(true);
     setError('');
 
     try {
-      const result = await listDriveFiles(currentFolder.id, search);
-      setFiles(result);
-    } catch (err: any) {
-      setError(err?.message || 'Unable to load Google Drive files.');
+      const result = await listDriveFiles(
+        currentFolder.id,
+        search.trim()
+      );
+
+      setFiles(Array.isArray(result) ? result : []);
+    } catch (err: unknown) {
+      console.error('Failed to load Google Drive files:', err);
+
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Unable to load Google Drive files.';
+
+      setError(message);
+      setFiles([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentFolder.id, search]);
 
+  /**
+   * Load files whenever the current folder changes.
+   */
   useEffect(() => {
-    loadFiles();
-  }, [currentFolder.id]);
+    void loadFiles();
+  }, [loadFiles]);
 
-  const handleSearch = async (event: React.FormEvent) => {
+  /**
+   * Search files.
+   */
+  const handleSearch = async (
+    event: React.FormEvent<HTMLFormElement>
+  ) => {
     event.preventDefault();
     await loadFiles();
   };
 
+  /**
+   * Open a Drive folder.
+   */
   const openFolder = (folder: DriveFileItem) => {
+    if (folder.type !== 'folder') {
+      return;
+    }
+
     setFolderStack((current) => [
       ...current,
       {
@@ -83,33 +129,105 @@ export const DrivePage: React.FC = () => {
     ]);
 
     setSearch('');
+    setError('');
   };
 
+  /**
+   * Go back to the previous folder.
+   */
   const goBack = () => {
-    if (folderStack.length <= 1) return;
+    if (folderStack.length <= 1) {
+      return;
+    }
 
     setFolderStack((current) => current.slice(0, -1));
+
     setSearch('');
+    setError('');
   };
 
+  /**
+   * Upload a file to the current Drive folder.
+   */
   const handleUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = event.target.files?.[0];
 
-    if (!file) return;
+    if (!file) {
+      return;
+    }
 
     setUploading(true);
     setError('');
 
     try {
       await uploadDriveFile(file, currentFolder.id);
+
       await loadFiles();
-    } catch (err: any) {
-      setError(err?.message || 'Unable to upload file.');
+    } catch (err: unknown) {
+      console.error('Failed to upload file:', err);
+
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Unable to upload file.';
+
+      setError(message);
     } finally {
       setUploading(false);
+
+      /*
+       * Allow the same file to be selected again.
+       */
       event.target.value = '';
+    }
+  };
+
+  /**
+   * Download a Drive file.
+   *
+   * IMPORTANT:
+   *
+   * Do NOT use:
+   *
+   * <a href="/api/drive/files/.../download/">
+   *
+   * because the browser will request that URL directly
+   * without our Authorization header.
+   *
+   * saveDriveFile() uses apiFetch(), which adds:
+   *
+   * Authorization: Bearer <access_token>
+   */
+  const handleDownload = async (file: DriveFileItem) => {
+    if (!file.id) {
+      setError(
+        'Unable to download this file because the file ID is missing.'
+      );
+      return;
+    }
+
+    if (file.type === 'folder') {
+      return;
+    }
+
+    setDownloadingId(file.id);
+    setError('');
+
+    try {
+      await saveDriveFile(file.id, file.name);
+    } catch (err: unknown) {
+      console.error('Failed to download file:', err);
+
+      const message =
+        err instanceof Error
+          ? err.message
+          : `Unable to download "${file.name}".`;
+
+      setError(message);
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -118,12 +236,15 @@ export const DrivePage: React.FC = () => {
       <Header />
 
       <main className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6">
+
         {/* Page heading */}
         <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+
           <div>
             <div className="mb-2 flex items-center gap-2 text-xs font-mono uppercase tracking-[0.18em] text-[#b45309]">
               <HardDrive className="h-4 w-4" />
-              Drive Workspace
+
+              <span>Drive Workspace</span>
             </div>
 
             <h1 className="text-3xl font-bold tracking-tight text-slate-900">
@@ -136,19 +257,35 @@ export const DrivePage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
+
+            {/* Refresh */}
             <button
               type="button"
-              onClick={loadFiles}
-              disabled={loading}
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              onClick={() => void loadFiles()}
+              disabled={
+                loading ||
+                uploading ||
+                downloadingId !== null
+              }
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <RefreshCw
-                className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`}
+                className={`h-4 w-4 ${
+                  loading ? 'animate-spin' : ''
+                }`}
               />
+
               Refresh
             </button>
 
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-[#4285F4] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3367D6]">
+            {/* Upload */}
+            <label
+              className={`inline-flex items-center gap-2 rounded-lg bg-[#4285F4] px-4 py-2 text-sm font-semibold text-white transition-colors ${
+                uploading
+                  ? 'cursor-not-allowed opacity-60'
+                  : 'cursor-pointer hover:bg-[#3367D6]'
+              }`}
+            >
               {uploading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -169,8 +306,12 @@ export const DrivePage: React.FC = () => {
 
         {/* Search + breadcrumb */}
         <div className="mb-4 rounded-xl border border-slate-200 bg-white p-4">
+
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+
+            {/* Breadcrumb */}
             <div className="flex items-center gap-2 text-sm">
+
               <button
                 type="button"
                 onClick={goBack}
@@ -182,10 +323,15 @@ export const DrivePage: React.FC = () => {
               </button>
 
               <div className="flex flex-wrap items-center gap-1 text-slate-500">
+
                 {folderStack.map((folder, index) => (
-                  <React.Fragment key={`${folder.id || 'root'}-${index}`}>
+                  <React.Fragment
+                    key={`${folder.id || 'root'}-${index}`}
+                  >
                     {index > 0 && (
-                      <span className="px-1 text-slate-300">/</span>
+                      <span className="px-1 text-slate-300">
+                        /
+                      </span>
                     )}
 
                     <span
@@ -199,65 +345,105 @@ export const DrivePage: React.FC = () => {
                     </span>
                   </React.Fragment>
                 ))}
+
               </div>
             </div>
 
-            <form onSubmit={handleSearch} className="relative w-full lg:w-80">
+            {/* Search */}
+            <form
+              onSubmit={handleSearch}
+              className="relative w-full lg:w-80"
+            >
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 
               <input
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) =>
+                  setSearch(event.target.value)
+                }
                 placeholder="Search files..."
                 className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm outline-none focus:border-[#4285F4] focus:ring-2 focus:ring-blue-100"
               />
             </form>
+
           </div>
         </div>
 
         {/* Error */}
         {error && (
           <div className="mb-4 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
+
             <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
-            <div>
-              <p className="font-semibold">Google Drive unavailable</p>
-              <p className="mt-1 text-sm">{error}</p>
+
+            <div className="min-w-0">
+              <p className="font-semibold">
+                Google Drive unavailable
+              </p>
+
+              <p className="mt-1 break-words text-sm">
+                {error}
+              </p>
             </div>
+
           </div>
         )}
 
         {/* Files */}
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+
+          {/* Table header */}
           <div className="grid grid-cols-[minmax(260px,2fr)_1fr_1fr_120px_80px] border-b border-slate-200 bg-slate-50 px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+
             <span>Name</span>
+
             <span>Owner</span>
+
             <span>Modified</span>
+
             <span>Size</span>
+
             <span></span>
+
           </div>
 
+          {/* Loading */}
           {loading ? (
             <div className="flex items-center justify-center gap-2 py-16 text-sm text-slate-500">
+
               <Loader2 className="h-5 w-5 animate-spin" />
+
               Loading Google Drive...
+
             </div>
           ) : files.length === 0 ? (
+
+            /* Empty */
             <div className="py-16 text-center">
+
               <FolderOpen className="mx-auto h-10 w-10 text-slate-300" />
+
               <p className="mt-3 font-semibold text-slate-700">
                 No files found
               </p>
+
               <p className="mt-1 text-sm text-slate-500">
                 This folder doesn't contain any matching files.
               </p>
+
             </div>
+
           ) : (
+
+            /* File list */
             files.map((file) => (
               <div
                 key={file.id}
                 className="grid grid-cols-[minmax(260px,2fr)_1fr_1fr_120px_80px] items-center border-b border-slate-100 px-5 py-4 last:border-b-0 hover:bg-slate-50"
               >
+
+                {/* File name */}
                 <div className="flex min-w-0 items-center gap-3">
+
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white">
                     {getFileIcon(file.type)}
                   </div>
@@ -275,39 +461,62 @@ export const DrivePage: React.FC = () => {
                       {file.name}
                     </span>
                   )}
+
                 </div>
 
+                {/* Owner */}
                 <span className="truncate pr-3 text-sm text-slate-600">
                   {file.owner}
                 </span>
 
+                {/* Modified */}
                 <span className="truncate pr-3 text-sm text-slate-500">
                   {file.modifiedAt}
                 </span>
 
+                {/* Size */}
                 <span className="text-sm text-slate-500">
                   {file.size}
                 </span>
 
+                {/* Actions */}
                 <div className="flex justify-end">
+
                   {file.type !== 'folder' && (
-                    <a
-                      href={getDriveDownloadUrl(file.id)}
-                      className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-800"
-                      title="Download"
+                    <button
+                      type="button"
+                      onClick={() => void handleDownload(file)}
+                      disabled={
+                        downloadingId === file.id ||
+                        uploading ||
+                        loading
+                      }
+                      className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                      title={`Download ${file.name}`}
+                      aria-label={`Download ${file.name}`}
                     >
-                      <Download className="h-4 w-4" />
-                    </a>
+                      {downloadingId === file.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4" />
+                      )}
+                    </button>
                   )}
+
                 </div>
+
               </div>
             ))
           )}
+
         </div>
 
+        {/* Footer */}
         <div className="mt-4 text-xs text-slate-400">
-          Google Drive · {files.length} item{files.length === 1 ? '' : 's'}
+          Google Drive · {files.length} item
+          {files.length === 1 ? '' : 's'}
         </div>
+
       </main>
     </div>
   );

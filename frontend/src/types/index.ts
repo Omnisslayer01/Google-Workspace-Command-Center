@@ -116,14 +116,27 @@ export interface SheetColumn {
 export interface WorksheetItem {
   id: string;
   title: string;
+
   rowCount: number;
   colCount: number;
+
   metrics: SheetMetric[];
+
   columns: SheetColumn[];
+
   records: Record<string, any>[];
+
   chartData: {
-    categories: Array<{ label: string; value: number; color?: string }>;
-    timeline: Array<{ period: string; count: number; value: number }>;
+    categories: Array<{
+      label: string;
+      value: number;
+      color?: string;
+    }>;
+    timeline: Array<{
+      period: string;
+      count: number;
+      value: number;
+    }>;
   };
 }
 
