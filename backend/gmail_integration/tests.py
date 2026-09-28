@@ -116,6 +116,50 @@ class GmailServiceTests(APITestCase):
             id="attachment-1",
         )
 
+    def test_list_labels_returns_gmail_response(self):
+        self.gmail_client.users.return_value.labels.return_value.list.return_value.execute.return_value = {
+            "labels": [
+                 {"id": "INBOX", "name": "INBOX"},
+                 {"id": "STARRED", "name": "STARRED"},
+                 ]
+            }
+        
+        result = self.service.list_labels()
+        self.assertEqual(result["labels"][0]["name"], "INBOX")
+        self.gmail_client.users.return_value.labels.return_value.list.assert_called_once_with(
+            userId="me"
+            )
+        
+    
+    def test_list_messages_with_label_filter(self):
+        self.gmail_client.users.return_value.messages.return_value.list.return_value.execute.return_value = {
+            "messages": [{"id": "1"}]
+            }
+        
+        self.service.list_messages(label_id="INBOX")
+        
+        self.gmail_client.users.return_value.messages.return_value.list.assert_called_once_with(
+            userId="me",
+            maxResults=20,
+            pageToken=None,
+            labelIds=["INBOX"],
+            )
+
+
+    def test_list_messages_with_starred_filter(self):
+        self.gmail_client.users.return_value.messages.return_value.list.return_value.execute.return_value = {
+            "messages": [{"id": "1"}]
+            }
+        
+        self.service.list_messages(filter_type="starred")
+        
+        self.gmail_client.users.return_value.messages.return_value.list.assert_called_once_with(
+            userId="me",
+            maxResults=20,
+            pageToken=None,
+            q="is:starred",
+            )
+
 
 # ---------------------------------------------------------------------------
 # Base class for Gmail view tests
@@ -337,6 +381,57 @@ class MessageSearchViewTests(GmailViewTestBase):
         self.mock_service.search.side_effect = _make_http_error(500)
 
         response = self.client.get(self.URL + "?q=test", **self.auth)
+
+        self.assertEqual(response.status_code, status.HTTP_502_BAD_GATEWAY)
+
+
+class LabelsViewTests(GmailViewTestBase):
+    URL = "/api/gmail/labels/"
+
+    def test_returns_labels(self):
+        self.mock_service.list_labels.return_value = {
+            "labels": [
+                {"id": "INBOX", "name": "INBOX"},
+                {"id": "STARRED", "name": "STARRED"},
+            ]
+        }
+
+        response = self.client.get(self.URL, **self.auth)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["data"]), 2)
+
+    def test_gmail_api_error_returns_502(self):
+        self.mock_service.list_labels.side_effect = _make_http_error(500)
+
+        response = self.client.get(self.URL, **self.auth)
+
+        self.assertEqual(response.status_code, status.HTTP_502_BAD_GATEWAY)
+
+
+class ActivityMetricsViewTests(GmailViewTestBase):
+    URL = "/api/gmail/activity-metrics/"
+
+    def test_returns_metrics(self):
+        self.mock_service.list_messages.side_effect = [
+            {"resultSizeEstimate": 120},
+            {"resultSizeEstimate": 15},
+        ]
+        self.mock_service.list_labels.return_value = {
+            "labels": [{"name": "INBOX"}, {"name": "STARRED"}]
+        }
+
+        response = self.client.get(self.URL, **self.auth)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["data"]["total_messages"], 120)
+        self.assertEqual(response.data["data"]["starred_messages"], 15)
+        self.assertEqual(response.data["data"]["label_count"], 2)
+
+    def test_gmail_api_error_returns_502(self):
+        self.mock_service.list_messages.side_effect = _make_http_error(500)
+
+        response = self.client.get(self.URL, **self.auth)
 
         self.assertEqual(response.status_code, status.HTTP_502_BAD_GATEWAY)
 

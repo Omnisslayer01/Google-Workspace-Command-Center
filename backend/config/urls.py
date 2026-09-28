@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.urls import include, path
+from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -25,4 +26,8 @@ urlpatterns = [
 
     # automation model added 
     path("api/automations/", include("automation.urls")),
+
+
 ]
+
+
