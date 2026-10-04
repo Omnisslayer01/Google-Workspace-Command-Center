@@ -32,9 +32,9 @@ if not DEBUG:
 
 #ALLOWED_HOSTS = []
 ALLOWED_HOSTS = [
-    host.strip()
-    for host in os.getenv("ALLOWED_HOSTS", "").split(",")
-    if host.strip()
+    "google-workspace-command-center.onrender.com",
+    "localhost",
+    "127.0.0.1",
 ]
 
 
