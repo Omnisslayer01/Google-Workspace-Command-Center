@@ -37,26 +37,35 @@ SCOPE_DESCRIPTIONS = {
 
 
 def get_flow():
+    redirect_uri = os.getenv("GOOGLE_REDIRECT_URI")
+    client_id = os.getenv("GOOGLE_CLIENT_ID")
+    client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+
+    if not redirect_uri:
+        raise ValueError("GOOGLE_REDIRECT_URI is not configured")
+
+    if not client_id:
+        raise ValueError("GOOGLE_CLIENT_ID is not configured")
+
+    if not client_secret:
+        raise ValueError("GOOGLE_CLIENT_SECRET is not configured")
+
     client_config = {
         "web": {
-            "client_id": os.getenv("GOOGLE_CLIENT_ID"),
-            "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),
+            "client_id": client_id,
+            "client_secret": client_secret,
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
             "token_uri": "https://oauth2.googleapis.com/token",
-            "redirect_uris": [
-                os.getenv("GOOGLE_REDIRECT_URI")
-            ],
+            "redirect_uris": [redirect_uri],
         }
     }
 
-    flow = Flow.from_client_config(
+    return Flow.from_client_config(
         client_config,
         scopes=GOOGLE_SCOPES,
-        redirect_uri=os.getenv("GOOGLE_REDIRECT_URI"),
+        redirect_uri=redirect_uri,
         autogenerate_code_verifier=False,
     )
-
-    return flow
 
 def _get_fernet():
     return Fernet(
