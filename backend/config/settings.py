@@ -32,9 +32,12 @@ if not DEBUG:
 
 #ALLOWED_HOSTS = []
 ALLOWED_HOSTS = [
-    "google-workspace-command-center.onrender.com",
-    "localhost",
-    "127.0.0.1",
+    host.strip()
+    for host in os.getenv(
+        "ALLOWED_HOSTS",
+        "localhost,127.0.0.1,google-workspace-command-center-1.onrender.com"
+    ).split(",")
+    if host.strip()
 ]
 
 FRONTEND_URL = os.getenv(
