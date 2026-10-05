@@ -37,27 +37,26 @@ SCOPE_DESCRIPTIONS = {
 
 
 def get_flow():
-    """Google OAuth Flow object banvto, client config .env varun gheto."""
-
     client_config = {
         "web": {
             "client_id": os.getenv("GOOGLE_CLIENT_ID"),
             "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
             "token_uri": "https://oauth2.googleapis.com/token",
-            "redirect_uris": [os.getenv("GOOGLE_REDIRECT_URI")],
+            "redirect_uris": [
+                "https://google-workspace-command-center-1.onrender.com/api/auth/google/callback/"
+            ],
         }
     }
 
     flow = Flow.from_client_config(
         client_config,
         scopes=GOOGLE_SCOPES,
-        redirect_uri=os.getenv("GOOGLE_REDIRECT_URI"),
+        redirect_uri="https://google-workspace-command-center-1.onrender.com/api/auth/google/callback/",
         autogenerate_code_verifier=False,
     )
 
     return flow
-
 
 def _get_fernet():
     return Fernet(
