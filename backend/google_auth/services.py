@@ -44,7 +44,7 @@ def get_flow():
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
             "token_uri": "https://oauth2.googleapis.com/token",
             "redirect_uris": [
-                "https://google-workspace-command-center-1.onrender.com/api/auth/google/callback/"
+                os.getenv("GOOGLE_REDIRECT_URI")
             ],
         }
     }
@@ -52,7 +52,7 @@ def get_flow():
     flow = Flow.from_client_config(
         client_config,
         scopes=GOOGLE_SCOPES,
-        redirect_uri="https://google-workspace-command-center-1.onrender.com/api/auth/google/callback/",
+        redirect_uri=os.getenv("GOOGLE_REDIRECT_URI"),
         autogenerate_code_verifier=False,
     )
 
