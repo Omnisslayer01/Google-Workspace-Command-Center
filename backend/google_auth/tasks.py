@@ -17,6 +17,8 @@ def sync_google_data(self, user_id):
         
         # Example logic to trigger credential refresh or data sync here
         if hasattr(user, 'google_credential'):
+            # TODO: Sync logic is missing in code.
+            # It will probably be provided by another programmer in the future.
             # user.google_credential.refresh_token_if_needed()
             pass
             

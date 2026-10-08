@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { AuditActivityLogPage } from "./pages/AuditActivityLogPage";
 import {
   BrowserRouter,
   Routes,
@@ -8,15 +9,22 @@ import {
   useNavigate,
 } from "react-router-dom";
 
+import { Dashboard } from "./pages/Dashboard";
+import { CalendarPage } from "./pages/CalendarPage";
+import { TasksPage } from "./pages/TasksPage";
+import { SheetsPage } from "./pages/SheetsPage";
 import { Concept5Workspace } from "./pages/Concept5Workspace";
+import { DrivePage } from "./pages/DrivePage";
+import { AutomationBuilderPage } from "./pages/AutomationBuilderPage";
+import { AutomationExecutionHistoryPage } from "./pages/AutomationExecutionHistoryPage";
+
 
 /**
- * Handles the redirect from the Django Google OAuth callback.
+ * Handles the Google OAuth callback.
  *
- * Backend redirects to:
- * http://localhost:5173/?access=<token>&refresh=<token>
- *
- * The tokens are stored locally and then removed from the URL.
+ * Google redirects back to the frontend with:
+ * ?access=...
+ * ?refresh=...
  */
 const OAuthCallbackHandler: React.FC = () => {
   const location = useLocation();
@@ -38,7 +46,7 @@ const OAuthCallbackHandler: React.FC = () => {
     }
 
     if (accessToken || refreshToken) {
-      navigate("/", { replace: true });
+      navigate("/dashboard", { replace: true });
       return;
     }
 
@@ -49,6 +57,24 @@ const OAuthCallbackHandler: React.FC = () => {
   }, [location.search, navigate]);
 
   return null;
+};
+
+/**
+ * Protects pages that require authentication.
+ *
+ * If there is no access token, the user is sent back
+ * to the public landing page.
+ */
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const accessToken = localStorage.getItem("access_token");
+
+  if (!accessToken) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
 };
 
 /**
@@ -71,13 +97,81 @@ export const App: React.FC = () => {
       <ScrollToTop />
 
       <Routes>
+        {/* ================= PUBLIC ================= */}
+
+        {/* Landing page */}
         <Route path="/" element={<Concept5Workspace />} />
 
+        {/* ================= PROTECTED ================= */}
+
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/audit"
+          element={
+            <ProtectedRoute>
+              <AuditActivityLogPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/calendar"
+          element={
+            <ProtectedRoute>
+              <CalendarPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/automations/history"
+          element={
+            <ProtectedRoute>
+              <AutomationExecutionHistoryPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route path="/drive" element={<DrivePage />} />
+
+        <Route
+          path="/automations/new"
+          element={<AutomationBuilderPage />}
+        />
+
+        <Route
+          path="/tasks"
+          element={
+            <ProtectedRoute>
+              <TasksPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/sheets"
+          element={
+            <ProtectedRoute>
+              <SheetsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Old concept route → public landing page */}
         <Route
           path="/concept-5"
           element={<Navigate to="/" replace />}
         />
 
+        {/* Unknown routes */}
         <Route
           path="*"
           element={<Navigate to="/" replace />}
