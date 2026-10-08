@@ -220,6 +220,22 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'google_auth.tasks.sync_all_google_data',
         'schedule': 3600.0,
     },
+    'poll-gmail-triggers': {
+        'task': 'automation.tasks.poll_gmail_triggers',
+        'schedule': 60.0,
+    },
+    'poll-calendar-triggers': {
+        'task': 'automation.tasks.poll_calendar_triggers',
+        'schedule': 60.0,
+    },
+    'poll-drive-triggers': {
+        'task': 'automation.tasks.poll_drive_triggers',
+        'schedule': 60.0,
+    },
+    'cleanup-expired-records': {
+        'task': 'automation.tasks.cleanup_expired_records',
+        'schedule': 86400.0, # Every 24 hours
+    },
 }
 
 

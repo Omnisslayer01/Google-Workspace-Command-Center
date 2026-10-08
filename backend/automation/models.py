@@ -35,6 +35,7 @@ class Trigger(models.Model):
     )
     type = models.CharField(max_length=50, choices=TRIGGER_TYPES)
     config = models.JSONField(default=dict)
+    last_polled_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.automation.name} - {self.type}"
