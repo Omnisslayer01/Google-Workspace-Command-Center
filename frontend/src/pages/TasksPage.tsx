@@ -8,7 +8,6 @@ import {
   TaskCreateInput,
   TaskStatus,
 } from '../types';
-import { MOCK_TASKS } from '../data/mockData';
 
 import {
   CheckSquare,
@@ -16,10 +15,15 @@ import {
   Search,
   CheckCircle2,
   Clock,
+  Loader2,
+  AlertTriangle,
 } from 'lucide-react';
 
 export const TasksPage: React.FC = () => {
-  const [tasks, setTasks] = useState<WorkspaceTask[]>(MOCK_TASKS);
+  const [tasks, setTasks] = useState<WorkspaceTask[]>([]);
+  const [loadingTasks, setLoadingTasks] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] =
     useState<WorkspaceTask | null>(null);
@@ -38,13 +42,11 @@ export const TasksPage: React.FC = () => {
   }, []);
 
   const loadTasks = async () => {
+    setLoadingTasks(true);
+    setLoadError(null);
+    setActionError(null);
     try {
       const response = await tasksApi.listTasks();
-
-      /*
-       * Your API helper already returns the normalized response.
-       * Do NOT use response.data.data or response.data.result here.
-       */
 
       if (Array.isArray(response?.data)) {
         setTasks(response.data);
@@ -54,11 +56,12 @@ export const TasksPage: React.FC = () => {
         console.warn('Unexpected tasks API response:', response);
         setTasks([]);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load tasks:', error);
-
-      // Keep mock tasks so the page never becomes blank.
-      setTasks(MOCK_TASKS);
+      setLoadError(error?.message || 'Failed to load tasks from the server.');
+      setTasks([]);
+    } finally {
+      setLoadingTasks(false);
     }
   };
 
@@ -67,6 +70,7 @@ export const TasksPage: React.FC = () => {
   // ---------------------------------------------------------
 
   const handleToggleComplete = async (id: string) => {
+    setActionError(null);
     try {
       const updatedTask = await tasksApi.toggleComplete(id);
 
@@ -75,30 +79,9 @@ export const TasksPage: React.FC = () => {
           task.id === id ? updatedTask : task
         )
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to toggle task:', error);
-
-      /*
-       * Local fallback.
-       * This keeps the UI working even if backend is unavailable.
-       */
-      setTasks((previousTasks) =>
-        previousTasks.map((task) => {
-          if (task.id !== id) return task;
-
-          const currentStatus = task.status;
-
-          const nextStatus =
-            currentStatus === 'completed'
-              ? ('todo' as TaskStatus)
-              : ('completed' as TaskStatus);
-
-          return {
-            ...task,
-            status: nextStatus,
-          };
-        })
-      );
+      setActionError(error?.message || 'Failed to update task status on the server.');
     }
   };
 
@@ -107,6 +90,7 @@ export const TasksPage: React.FC = () => {
   // ---------------------------------------------------------
 
   const handleSaveTask = async (data: TaskCreateInput) => {
+    setActionError(null);
     /*
      * EDIT EXISTING TASK
      */
@@ -124,35 +108,12 @@ export const TasksPage: React.FC = () => {
               : task
           )
         );
-      } catch (error) {
-        console.error(
-          'Failed to update task. Updating locally instead:',
-          error
-        );
-
-        /*
-         * Local fallback.
-         *
-         * We only use fields that are actually present
-         * in TaskCreateInput.
-         */
-        setTasks((previousTasks) =>
-          previousTasks.map((task) =>
-            task.id === editingTask.id
-              ? {
-                  ...task,
-                  title: data.title,
-                  description: data.description ?? task.description,
-                  due_date:
-                    data.due_date ?? task.due_date,
-                }
-              : task
-          )
-        );
+        setIsModalOpen(false);
+        setEditingTask(null);
+      } catch (error: any) {
+        console.error('Failed to update task:', error);
+        setActionError(error?.message || 'Failed to update task on the server.');
       }
-
-      setIsModalOpen(false);
-      setEditingTask(null);
       return;
     }
 
@@ -160,55 +121,18 @@ export const TasksPage: React.FC = () => {
      * CREATE NEW TASK
      */
     try {
-      /*
-       * IMPORTANT:
-       *
-       * tasksApi.createTask() returns the task itself.
-       * It is NOT an Axios response.
-       *
-       * Therefore:
-       *
-       * ❌ response.data
-       *
-       * ✅ createdTask
-       */
       const createdTask = await tasksApi.createTask(data);
 
       setTasks((previousTasks) => [
         createdTask,
         ...previousTasks,
       ]);
-    } catch (error) {
-      console.error(
-        'Failed to create task. Creating local task instead:',
-        error
-      );
-
-      /*
-       * Backend unavailable fallback.
-       *
-       * We intentionally do NOT use data.priority because
-       * TaskCreateInput in your project does not contain it.
-       *
-       * We also cast only this local fallback because the exact
-       * WorkspaceTask backend fields are defined by your project.
-       */
-      const localTask = {
-        id: `local-${Date.now()}`,
-        title: data.title,
-        description: data.description ?? '',
-        status: 'todo',
-        due_date: data.due_date,
-      } as unknown as WorkspaceTask;
-
-      setTasks((previousTasks) => [
-        localTask,
-        ...previousTasks,
-      ]);
+      setIsModalOpen(false);
+      setEditingTask(null);
+    } catch (error: any) {
+      console.error('Failed to create task:', error);
+      setActionError(error?.message || 'Failed to create task on the server.');
     }
-
-    setIsModalOpen(false);
-    setEditingTask(null);
   };
 
   // ---------------------------------------------------------
@@ -216,24 +140,16 @@ export const TasksPage: React.FC = () => {
   // ---------------------------------------------------------
 
   const handleDeleteTask = async (id: string) => {
+    setActionError(null);
     try {
       await tasksApi.deleteTask(id);
 
       setTasks((previousTasks) =>
         previousTasks.filter((task) => task.id !== id)
       );
-    } catch (error) {
-      console.error(
-        'Failed to delete task. Removing locally:',
-        error
-      );
-
-      /*
-       * Even if backend fails, remove it from the UI.
-       */
-      setTasks((previousTasks) =>
-        previousTasks.filter((task) => task.id !== id)
-      );
+    } catch (error: any) {
+      console.error('Failed to delete task:', error);
+      setActionError(error?.message || 'Failed to delete task from the server.');
     }
   };
 
@@ -328,7 +244,7 @@ export const TasksPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col selection:bg-[#34A853] selection:text-white">
 
-      <Header unreadCount={2} />
+      <Header />
 
       <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
@@ -373,6 +289,35 @@ export const TasksPage: React.FC = () => {
           </button>
 
         </div>
+
+        {/* ERROR BANNERS */}
+        {actionError && (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-red-900">Task Action Failed</h3>
+              <p className="mt-0.5 text-xs text-red-700 leading-relaxed">{actionError}</p>
+            </div>
+          </div>
+        )}
+
+        {loadError && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-amber-900">Tasks Unavailable</h3>
+              <p className="mt-0.5 text-xs text-amber-700 leading-relaxed">{loadError}</p>
+            </div>
+          </div>
+        )}
+
+        {/* LOADING INDICATOR */}
+        {loadingTasks && (
+          <div className="bg-white border border-slate-200 rounded-xl p-8 text-center flex items-center justify-center space-x-2">
+            <Loader2 className="w-5 h-5 text-[#34A853] animate-spin" />
+            <span className="text-sm text-slate-500 font-medium">Loading workspace tasks...</span>
+          </div>
+        )}
 
         {/* KPI CARDS */}
 

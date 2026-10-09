@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { NavLink, Link } from 'react-router-dom';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import {
   CalendarDays,
   CheckSquare,
@@ -8,13 +8,14 @@ import {
   Bell,
   Menu,
   X,
-  Layers,
   HardDrive,
   Zap,
   History,
   Activity,
+  LogOut,
+  User,
+  ChevronDown,
 } from 'lucide-react';
-import { MOCK_NOTIFICATIONS } from '../../data/mockData';
 
 interface HeaderProps {
   onOpenNotifications?: () => void;
@@ -23,11 +24,38 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({
   onOpenNotifications,
-  unreadCount = 2,
+  unreadCount = 0,
 }) => {
+  const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showNotificationsDropdown, setShowNotificationsDropdown] =
     useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setShowProfileMenu(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setShowNotificationsDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    setShowProfileMenu(false);
+    navigate('/', { replace: true });
+  }, [navigate]);
+
+  const accessToken = localStorage.getItem('access_token');
 
   // Keep each navigation item only ONCE.
   const navItems = [
@@ -96,10 +124,10 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       <div className="mx-auto flex h-16 max-w-[1600px] items-center justify-between px-4 sm:px-6">
-        {/* Brand */}
+        {/* Brand - links to Dashboard, not landing page */}
         <div className="flex items-center gap-6">
           <Link
-            to="/"
+            to="/dashboard"
             className="flex items-center gap-2.5 group"
           >
             <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center p-1.5 shadow-2xs group-hover:border-slate-300 transition-colors">
@@ -165,7 +193,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Right Action Controls */}
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Notifications */}
-          <div className="relative">
+          <div className="relative" ref={notifRef}>
             <button
               type="button"
               onClick={() => {
@@ -199,59 +227,77 @@ export const Header: React.FC<HeaderProps> = ({
                       Workspace Alerts
                     </span>
 
-                    <span className="text-[11px] font-medium text-[#4285F4]">
-                      {MOCK_NOTIFICATIONS.length} events
+                    <span className="text-[11px] font-medium text-slate-400">
+                      No new notifications
                     </span>
                   </div>
 
-                  <div className="space-y-1.5 max-h-72 overflow-y-auto">
-                    {MOCK_NOTIFICATIONS.map((notif) => (
-                      <div
-                        key={notif.id}
-                        className="p-2.5 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all text-xs"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold text-slate-800">
-                            {notif.title}
-                          </span>
-
-                          <span className="text-[10px] text-slate-400">
-                            {notif.timestamp}
-                          </span>
-                        </div>
-
-                        <p className="text-slate-500 mt-1 line-clamp-2">
-                          {notif.message}
-                        </p>
-                      </div>
-                    ))}
+                  <div className="py-8 text-center text-sm text-slate-400">
+                    No notifications yet.
                   </div>
                 </div>
               )}
           </div>
 
-          {/* User Account */}
-          <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
-            <div className="relative">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white shadow-2xs">
-                Y
+          {/* User Account with Profile Menu */}
+          <div className="relative" ref={profileRef}>
+            <button
+              type="button"
+              onClick={() => setShowProfileMenu((prev) => !prev)}
+              className="flex items-center gap-2 pl-2 border-l border-slate-200 hover:bg-slate-50 rounded-lg px-2 py-1 transition-colors"
+            >
+              <div className="relative">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white shadow-2xs">
+                  <User className="w-4 h-4" />
+                </div>
+
+                {accessToken && (
+                  <span
+                    className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[#34A853] border-2 border-white"
+                    title="Authenticated"
+                  />
+                )}
               </div>
 
-              <span
-                className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[#34A853] border-2 border-white"
-                title="Google Workspace Connected"
-              />
-            </div>
+              <div className="hidden sm:block text-left">
+                <div className="text-xs font-semibold text-slate-900">
+                  {accessToken ? 'Workspace User' : 'Not signed in'}
+                </div>
 
-            <div className="hidden sm:block text-left">
-              <div className="text-xs font-semibold text-slate-900">
-                Yash
+                <div className="text-[10px] text-slate-500">
+                  {accessToken ? 'Google Connected' : 'Please sign in'}
+                </div>
               </div>
 
-              <div className="text-[10px] text-slate-500">
-                Google Workspace Admin
+              <ChevronDown className="w-3 h-3 text-slate-400 hidden sm:block" />
+            </button>
+
+            {/* Profile dropdown menu */}
+            {showProfileMenu && (
+              <div className="absolute right-0 mt-2 w-56 rounded-xl border border-slate-200 bg-white shadow-lg z-50">
+                <div className="p-2">
+                  {accessToken ? (
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>Sign Out</span>
+                    </button>
+                  ) : (
+                    <Link
+                      to="/"
+                      onClick={() => setShowProfileMenu(false)}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 rounded-lg transition-colors font-medium"
+                    >
+                      <User className="w-4 h-4" />
+                      <span>Sign In</span>
+                    </Link>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Mobile Menu Toggle */}
@@ -298,16 +344,19 @@ export const Header: React.FC<HeaderProps> = ({
             );
           })}
 
-          <div className="pt-2 border-t border-slate-100">
-            <Link
-              to="/concepts"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-3 px-3 py-2 text-xs text-slate-500 hover:bg-slate-50 rounded-lg"
-            >
-              <Layers className="w-4 h-4 text-slate-400" />
-              <span>Review Design Concepts 1–5</span>
-            </Link>
-          </div>
+          {/* Mobile logout */}
+          {accessToken && (
+            <div className="pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg w-full"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
     </header>

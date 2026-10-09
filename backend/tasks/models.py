@@ -7,6 +7,7 @@ class Task(models.Model):
     description = models.TextField(blank=True, null=True)
     due_date = models.DateTimeField(blank=True, null=True)
     status = models.CharField(max_length=50, default='todo')
+    google_task_id = models.CharField(max_length=255, blank=True, null=True, db_index=True)
     
     # Existing project ownership/security pattern
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tasks')

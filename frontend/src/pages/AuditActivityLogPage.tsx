@@ -16,6 +16,7 @@ import {
   type AuditLog,
   type AuditLogFilters,
 } from '../lib/auditApi';
+import { Header } from '../components/common/Header';
 
 const formatDateTime = (value: string): string => {
   const date = new Date(value);
@@ -183,9 +184,10 @@ export const AuditActivityLogPage: React.FC = () => {
   const hasLogs = logs.length > 0;
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-6 md:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
-        {/* Header */}
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      <Header />
+      <main className="mx-auto max-w-7xl w-full flex-1 px-4 py-6 md:px-6 lg:px-8">
+        {/* Page Title */}
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <div className="mb-2 flex items-center gap-2">
@@ -627,7 +629,7 @@ export const AuditActivityLogPage: React.FC = () => {
             </div>
           )}
         </section>
-      </div>
+      </main>
     </div>
   );
 };
