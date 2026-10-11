@@ -20,6 +20,7 @@ GOOGLE_SCOPES = [
     'https://www.googleapis.com/auth/calendar',
     'https://www.googleapis.com/auth/drive',
     'https://www.googleapis.com/auth/spreadsheets',
+    'https://www.googleapis.com/auth/tasks',
 ]
 
 
@@ -33,13 +34,15 @@ SCOPE_DESCRIPTIONS = {
         'View your Drive files',
     'https://www.googleapis.com/auth/spreadsheets':
         'Read and write your Sheets data',
+    'https://www.googleapis.com/auth/tasks':
+        'Manage your Google Tasks',
 }
 
 
 def get_flow():
-    redirect_uri = os.getenv("GOOGLE_REDIRECT_URI")
-    client_id = os.getenv("GOOGLE_CLIENT_ID")
-    client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+    redirect_uri = getattr(settings, 'GOOGLE_REDIRECT_URI', None) or os.getenv("GOOGLE_REDIRECT_URI")
+    client_id = getattr(settings, 'GOOGLE_CLIENT_ID', None) or os.getenv("GOOGLE_CLIENT_ID")
+    client_secret = getattr(settings, 'GOOGLE_CLIENT_SECRET', None) or os.getenv("GOOGLE_CLIENT_SECRET")
 
     if not redirect_uri:
         raise ValueError("GOOGLE_REDIRECT_URI is not configured")

@@ -17,6 +17,7 @@ import {
   type AutomationExecution,
   type AutomationStepResult,
 } from '../lib/automationApi';
+import { Header } from '../components/common/Header';
 
 const STATUS_CONFIG: Record<
   string,
@@ -308,9 +309,10 @@ export const AutomationExecutionHistoryPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <div className="mx-auto max-w-7xl px-6 py-8">
-        {/* Header */}
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
+      <Header />
+      <main className="mx-auto max-w-7xl w-full flex-1 px-6 py-8">
+        {/* Page Heading */}
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="mb-2 flex items-center gap-2">
@@ -427,7 +429,7 @@ export const AutomationExecutionHistoryPage: React.FC = () => {
             </>
           )}
         </section>
-      </div>
+      </main>
     </div>
   );
 };

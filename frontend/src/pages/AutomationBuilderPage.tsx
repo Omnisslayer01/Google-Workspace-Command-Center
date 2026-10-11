@@ -18,6 +18,7 @@ import {
   type AutomationCondition,
   type AutomationAction,
 } from '../lib/automationApi';
+import { Header } from '../components/common/Header';
 
 const TRIGGERS = [
   { value: 'gmail_new', label: 'New Gmail' },
@@ -292,8 +293,9 @@ export const AutomationBuilderPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <div className="mx-auto max-w-6xl px-6 py-8">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
+      <Header />
+      <main className="mx-auto max-w-6xl w-full flex-1 px-6 py-8">
         {/* Header */}
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -577,7 +579,7 @@ export const AutomationBuilderPage: React.FC = () => {
             {isSaving ? 'Creating...' : 'Create Automation'}
           </button>
         </div>
-      </div>
+      </main>
     </div>
   );
 };

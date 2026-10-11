@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env")
 load_dotenv(BASE_DIR.parent / ".env", override=True)
 import os
 os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
@@ -198,8 +199,11 @@ SIMPLE_JWT = {
 }
 
 FERNET_KEY = os.getenv('FERNET_KEY', '')
+GOOGLE_TOKEN_ENCRYPTION_KEY = os.getenv('GOOGLE_TOKEN_ENCRYPTION_KEY', '') or FERNET_KEY
 
-GOOGLE_TOKEN_ENCRYPTION_KEY = os.getenv('GOOGLE_TOKEN_ENCRYPTION_KEY', '')
+GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '')
+GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET', '')
+GOOGLE_REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI', '')
 
 
 # ---------------- Celery ----------------
@@ -219,6 +223,22 @@ CELERY_BEAT_SCHEDULE = {
     'sync-google-data': {
         'task': 'google_auth.tasks.sync_all_google_data',
         'schedule': 3600.0,
+    },
+    'poll-gmail-triggers': {
+        'task': 'automation.tasks.poll_gmail_triggers',
+        'schedule': 60.0,
+    },
+    'poll-calendar-triggers': {
+        'task': 'automation.tasks.poll_calendar_triggers',
+        'schedule': 60.0,
+    },
+    'poll-drive-triggers': {
+        'task': 'automation.tasks.poll_drive_triggers',
+        'schedule': 60.0,
+    },
+    'cleanup-expired-records': {
+        'task': 'automation.tasks.cleanup_expired_records',
+        'schedule': 86400.0, # Every 24 hours
     },
 }
 

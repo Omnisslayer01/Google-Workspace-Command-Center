@@ -52,7 +52,7 @@ export const DrivePage: React.FC = () => {
 
   const [folderStack, setFolderStack] = useState<
     Array<{ id?: string; name: string }>
-  >([{ name: 'My Drive' }]);
+  >([{ id: 'root', name: 'My Drive' }]);
 
   const [search, setSearch] = useState('');
 
@@ -334,15 +334,18 @@ export const DrivePage: React.FC = () => {
                       </span>
                     )}
 
-                    <span
+                    <button
+                      type="button"
+                      onClick={() => setFolderStack((curr) => curr.slice(0, index + 1))}
+                      disabled={index === folderStack.length - 1}
                       className={
                         index === folderStack.length - 1
-                          ? 'font-semibold text-slate-900'
-                          : ''
+                          ? 'font-semibold text-slate-900 cursor-default'
+                          : 'hover:text-slate-900 hover:underline cursor-pointer'
                       }
                     >
                       {folder.name}
-                    </span>
+                    </button>
                   </React.Fragment>
                 ))}
 

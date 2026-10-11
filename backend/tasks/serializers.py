@@ -6,10 +6,10 @@ class TaskSerializer(serializers.ModelSerializer):
         model = Task
         fields = [
             'id', 'title', 'description', 'due_date', 
-            'status', 'created_by_automation', 
+            'status', 'google_task_id', 'created_by_automation', 
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_by_automation', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'google_task_id', 'created_by_automation', 'created_at', 'updated_at']
 
     def validate_status(self, value):
         valid_statuses = ['todo', 'in_progress', 'completed']

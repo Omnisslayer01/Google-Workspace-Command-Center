@@ -140,11 +140,22 @@ export const App: React.FC = () => {
           }
         />
 
-        <Route path="/drive" element={<DrivePage />} />
+        <Route
+          path="/drive"
+          element={
+            <ProtectedRoute>
+              <DrivePage />
+            </ProtectedRoute>
+          }
+        />
 
         <Route
           path="/automations/new"
-          element={<AutomationBuilderPage />}
+          element={
+            <ProtectedRoute>
+              <AutomationBuilderPage />
+            </ProtectedRoute>
+          }
         />
 
         <Route

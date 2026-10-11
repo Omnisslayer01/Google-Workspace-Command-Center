@@ -6,21 +6,16 @@ import { SheetDataTable } from '../components/sheets/SheetDataTable';
 import { MetricCard } from '../components/common/MetricCard';
 import { sheetsApi } from '../lib/sheetsApi';
 import { SpreadsheetItem, WorksheetItem } from '../types';
-import { MOCK_SPREADSHEETS } from '../data/mockData';
-import { Table, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { Table, RefreshCw, CheckCircle2, AlertTriangle, Loader2, FileSpreadsheet } from 'lucide-react';
 
 export const SheetsPage: React.FC = () => {
-  const [spreadsheets, setSpreadsheets] = useState<SpreadsheetItem[]>(MOCK_SPREADSHEETS);
-  const [selectedSpreadsheetId, setSelectedSpreadsheetId] = useState<string>(
-    MOCK_SPREADSHEETS[0].id
-  );
-  const [selectedWorksheetId, setSelectedWorksheetId] = useState<string>(
-    MOCK_SPREADSHEETS[0].worksheets[0].id
-  );
-  const [activeWorksheet, setActiveWorksheet] = useState<WorksheetItem | null>(
-    MOCK_SPREADSHEETS[0].worksheets[0]
-  );
-  const [loading, setLoading] = useState(false);
+  const [spreadsheets, setSpreadsheets] = useState<SpreadsheetItem[]>([]);
+  const [selectedSpreadsheetId, setSelectedSpreadsheetId] = useState<string>('');
+  const [selectedWorksheetId, setSelectedWorksheetId] = useState<string>('');
+  const [activeWorksheet, setActiveWorksheet] = useState<WorksheetItem | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadingSheet, setLoadingSheet] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     loadSpreadsheetData();
@@ -28,20 +23,30 @@ export const SheetsPage: React.FC = () => {
 
   const loadSpreadsheetData = async () => {
     setLoading(true);
+    setErrorMessage(null);
     try {
       const res = await sheetsApi.getSpreadsheets();
-      setSpreadsheets(res.data);
-      if (res.data.length > 0) {
+      const sheetList = Array.isArray(res?.data) ? res.data : [];
+      setSpreadsheets(sheetList);
+
+      if (sheetList.length > 0) {
         let defaultSheetId = selectedSpreadsheetId;
-        if (!res.data.find(s => s.id === defaultSheetId)) {
-          defaultSheetId = res.data[0].id;
+        if (!defaultSheetId || !sheetList.find((s) => s.id === defaultSheetId)) {
+          defaultSheetId = sheetList[0].id;
         }
-        await handleSelectSpreadsheet(defaultSheetId, res.data);
+        await handleSelectSpreadsheet(defaultSheetId, sheetList);
       } else {
-         setActiveWorksheet(null);
+        setSelectedSpreadsheetId('');
+        setSelectedWorksheetId('');
+        setActiveWorksheet(null);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load spreadsheets:', err);
+      setErrorMessage(
+        err?.message || 'Failed to load Google Spreadsheets. Please ensure Google Workspace is connected.'
+      );
+      setSpreadsheets([]);
+      setActiveWorksheet(null);
     } finally {
       setLoading(false);
     }
@@ -49,13 +54,13 @@ export const SheetsPage: React.FC = () => {
 
   const handleSelectSpreadsheet = async (sheetId: string, currentSheets = spreadsheets) => {
     setSelectedSpreadsheetId(sheetId);
-    setLoading(true);
+    setLoadingSheet(true);
     try {
       const fullSheet = await sheetsApi.getSpreadsheet(sheetId);
-      if (fullSheet && fullSheet.worksheets.length > 0) {
-        setSpreadsheets(prev => {
+      if (fullSheet && fullSheet.worksheets && fullSheet.worksheets.length > 0) {
+        setSpreadsheets((prev) => {
           const list = prev.length > 0 ? prev : currentSheets;
-          return list.map(s => s.id === sheetId ? { ...s, worksheets: fullSheet.worksheets } : s)
+          return list.map((s) => (s.id === sheetId ? { ...s, worksheets: fullSheet.worksheets } : s));
         });
         const firstWs = fullSheet.worksheets[0];
         setSelectedWorksheetId(firstWs.id);
@@ -63,10 +68,12 @@ export const SheetsPage: React.FC = () => {
       } else {
         setActiveWorksheet(null);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to fetch sheet metadata', err);
+      setErrorMessage(err?.message || `Failed to fetch sheet contents for ID: ${sheetId}`);
+      setActiveWorksheet(null);
     } finally {
-      setLoading(false);
+      setLoadingSheet(false);
     }
   };
 
@@ -81,7 +88,7 @@ export const SheetsPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col selection:bg-[#34A853] selection:text-white">
-      <Header unreadCount={2} />
+      <Header />
 
       <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         {/* Page Header */}
@@ -98,7 +105,7 @@ export const SheetsPage: React.FC = () => {
               Sheets Analytics & Reporting
             </h1>
             <p className="mt-1 text-sm text-slate-500 max-w-2xl">
-              Live bi-directional ledger reporting, vendor payables reconciliation, marketing funnel conversion, and metrics telemetry.
+              Live Google Sheets analytics, dynamic schema inspection, calculated metrics, and automated column detection.
             </p>
           </div>
 
@@ -106,61 +113,111 @@ export const SheetsPage: React.FC = () => {
             <button
               type="button"
               onClick={loadSpreadsheetData}
-              disabled={loading}
+              disabled={loading || loadingSheet}
               className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 shadow-2xs transition-colors disabled:opacity-50"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-              <span>{loading ? 'Refreshing...' : 'Refresh Sheet Data'}</span>
+              <RefreshCw className={`w-3.5 h-3.5 ${loading || loadingSheet ? 'animate-spin' : ''}`} />
+              <span>{loading || loadingSheet ? 'Refreshing...' : 'Refresh Sheet Data'}</span>
             </button>
             <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-[#0f9d58] text-xs font-semibold">
               <CheckCircle2 className="w-3.5 h-3.5 text-[#34A853]" />
-              <span>Adapter Connected</span>
+              <span>Sheets API Live</span>
             </div>
           </div>
         </div>
 
+        {/* Error State */}
+        {errorMessage && (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-red-900">Sheets Analytics Error</h3>
+              <p className="mt-0.5 text-xs text-red-700 leading-relaxed">{errorMessage}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {loading && (
+          <div className="bg-white border border-slate-200 rounded-xl p-12 text-center flex flex-col items-center justify-center space-y-3">
+            <Loader2 className="w-8 h-8 text-[#34A853] animate-spin" />
+            <p className="text-sm text-slate-500 font-medium">Loading Google Spreadsheets from your account...</p>
+          </div>
+        )}
+
+        {/* Empty State when no sheets found */}
+        {!loading && !errorMessage && spreadsheets.length === 0 && (
+          <div className="bg-white border border-slate-200 rounded-xl p-12 text-center flex flex-col items-center justify-center space-y-3">
+            <div className="w-12 h-12 rounded-full bg-emerald-50 text-[#34A853] flex items-center justify-center">
+              <FileSpreadsheet className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-semibold text-slate-900">No Spreadsheets Found</h3>
+            <p className="text-sm text-slate-500 max-w-sm">
+              We couldn&apos;t find any Google Sheets in your connected Google account. Create or share a sheet in Google Drive to view analytics here.
+            </p>
+          </div>
+        )}
+
         {/* 1. Spreadsheet & Worksheet Picker */}
-        <section aria-label="Spreadsheet Selector">
-          <SpreadsheetSelector
-            spreadsheets={spreadsheets}
-            selectedSpreadsheetId={selectedSpreadsheetId}
-            selectedWorksheetId={selectedWorksheetId}
-            onSelectSpreadsheet={handleSelectSpreadsheet}
-            onSelectWorksheet={handleSelectWorksheet}
-            activeWorksheet={activeWorksheet}
-          />
-        </section>
-
-        {/* 2. Worksheet KPI Cards */}
-        {activeWorksheet && activeWorksheet.metrics && (
-          <section aria-label="Worksheet Metrics" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {activeWorksheet.metrics.map((metric, idx) => (
-              <MetricCard
-                key={idx}
-                label={metric.label}
-                value={metric.value}
-                change={metric.change}
-                changeType={metric.changeType}
-                subtext={metric.subtext}
-                topColor="#34A853"
-                icon={Table}
+        {!loading && spreadsheets.length > 0 && (
+          <>
+            <section aria-label="Spreadsheet Selector">
+              <SpreadsheetSelector
+                spreadsheets={spreadsheets}
+                selectedSpreadsheetId={selectedSpreadsheetId}
+                selectedWorksheetId={selectedWorksheetId}
+                onSelectSpreadsheet={handleSelectSpreadsheet}
+                onSelectWorksheet={handleSelectWorksheet}
+                activeWorksheet={activeWorksheet}
               />
-            ))}
-          </section>
-        )}
+            </section>
 
-        {/* 3. Visual Charts Section */}
-        {activeWorksheet && (
-          <section aria-label="Worksheet Visual Charts">
-            <SheetCharts worksheet={activeWorksheet} />
-          </section>
-        )}
+            {/* Sheet loading indicator */}
+            {loadingSheet && (
+              <div className="bg-white border border-slate-200 rounded-xl p-8 text-center flex items-center justify-center space-x-2">
+                <Loader2 className="w-5 h-5 text-[#34A853] animate-spin" />
+                <span className="text-sm text-slate-500 font-medium">Fetching worksheet rows and columns...</span>
+              </div>
+            )}
 
-        {/* 4. Tabular Data Records Table */}
-        {activeWorksheet && (
-          <section aria-label="Worksheet Records Table">
-            <SheetDataTable worksheet={activeWorksheet} />
-          </section>
+            {!loadingSheet && activeWorksheet && (
+              <>
+                {/* 2. Worksheet KPI Cards */}
+                {activeWorksheet.metrics && activeWorksheet.metrics.length > 0 && (
+                  <section aria-label="Worksheet Metrics" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {activeWorksheet.metrics.map((metric, idx) => (
+                      <MetricCard
+                        key={idx}
+                        label={metric.label}
+                        value={metric.value}
+                        change={metric.change}
+                        changeType={metric.changeType}
+                        subtext={metric.subtext}
+                        topColor="#34A853"
+                        icon={Table}
+                      />
+                    ))}
+                  </section>
+                )}
+
+                {/* 3. Visual Charts Section */}
+                <section aria-label="Worksheet Visual Charts">
+                  <SheetCharts worksheet={activeWorksheet} />
+                </section>
+
+                {/* 4. Tabular Data Records Table */}
+                <section aria-label="Worksheet Records Table">
+                  <SheetDataTable worksheet={activeWorksheet} />
+                </section>
+              </>
+            )}
+
+            {!loadingSheet && !activeWorksheet && (
+              <div className="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-500 text-sm">
+                No worksheet data found in this spreadsheet.
+              </div>
+            )}
+          </>
         )}
       </main>
     </div>
