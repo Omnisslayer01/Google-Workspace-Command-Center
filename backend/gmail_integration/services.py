@@ -26,19 +26,21 @@ class GmailService:
             credentials=credentials,
         )
 
-    def list_messages(self, max_results=20, page_token=None):
-        response = (
-            self.gmail.users()
-            .messages()
-            .list(
-                userId="me",
-                maxResults=max_results,
-                pageToken=page_token,
-            )
-            .execute()
-        )
+    def list_messages(self,max_results=20,page_token=None,label_id=None,filter_type=None,):
+        params = {
+        "userId": "me",
+        "maxResults": max_results,
+        "pageToken": page_token,}
+        
+        if label_id:
+            params["labelIds"] = [label_id]
+        
+        if filter_type == "starred":
+            params["q"] = "is:starred"
+        
+        return (self.gmail.users().messages().list(**params).execute())
 
-        return response
+        
 
     def get_message(self, message_id):
         return (
@@ -66,6 +68,15 @@ class GmailService:
         )
 
         return response
+
+    def list_labels(self):
+        '''Return all Gmail labels.'''
+        return (
+        self.gmail.users()
+        .labels()
+        .list(userId="me")
+        .execute()
+        )
 
     @staticmethod
     def _build_raw_message(to, subject, body):
