@@ -15,4 +15,8 @@ db.sqlite3
 # OS/IDE junk
 .DS_Store
 .vscode/
+celerybeat-schedule
 
+# Django generated static files
+backend/staticfiles/
+Documentation

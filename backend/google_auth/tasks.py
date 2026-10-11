@@ -15,10 +15,9 @@ def sync_google_data(self, user_id):
         # Fetch user's GoogleCredential and perform sync
         logger.info(f"Syncing Google data for user {user.username}")
         
-        # Example logic to trigger credential refresh or data sync here
-        if hasattr(user, 'google_credential'):
-            # user.google_credential.refresh_token_if_needed()
-            pass
+        # Calling get_google_client will automatically refresh the token if needed
+        from google_auth.services import get_google_client
+        get_google_client(user)
             
     except User.DoesNotExist:
         logger.warning(f"User {user_id} does not exist. Cannot sync.")

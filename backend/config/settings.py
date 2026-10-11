@@ -1,16 +1,25 @@
 import os
 from pathlib import Path
 from datetime import timedelta
+
+import dj_database_url
 from dotenv import load_dotenv
 
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
+load_dotenv(BASE_DIR.parent / ".env", override=True)
+import os
+os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-SECRET_KEY = 'django-insecure-change-this-key-later-mkjh38dksn29xks-devonly'
-DEBUG = "True"
+SECRET_KEY = os.getenv(
+    "DJANGO_SECRET_KEY",
+    "django-insecure-dev-only-key"
+)
+
+DEBUG = os.getenv("DEBUG", "True").lower() == "true"
 
 if not DEBUG:
     SECURE_SSL_REDIRECT = True
@@ -20,13 +29,22 @@ if not DEBUG:
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 #ALLOWED_HOSTS = []
 ALLOWED_HOSTS = [
     host.strip()
-    for host in os.getenv("ALLOWED_HOSTS", "").split(",")
+    for host in os.getenv(
+        "ALLOWED_HOSTS",
+        "localhost,127.0.0.1,google-workspace-command-center-1.onrender.com"
+    ).split(",")
     if host.strip()
 ]
+
+FRONTEND_URL = os.getenv(
+    "FRONTEND_URL",
+    "http://localhost:5173"
+)
 
 
 INSTALLED_APPS = [
@@ -43,18 +61,23 @@ INSTALLED_APPS = [
     'accounts',
     'google_auth',
     'rbac',
+    'audit',
     'gmail_integration',
+    'calendar_integration',
     'notifications',
     'corsheaders',
     'sheets',
     'automation',
     'drive',
-
+    'tasks',
 ]
+
+
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -84,11 +107,14 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 
 
+import dj_database_url
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    "default": dj_database_url.config(
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 }
 
 
@@ -128,7 +154,17 @@ MAILERS = {
 # Convenience alias used by Django's send_mail() helper and Celery tasks.
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@gwcc.local')
 
-STATIC_URL = 'static/'
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -163,8 +199,11 @@ SIMPLE_JWT = {
 }
 
 FERNET_KEY = os.getenv('FERNET_KEY', '')
+GOOGLE_TOKEN_ENCRYPTION_KEY = os.getenv('GOOGLE_TOKEN_ENCRYPTION_KEY', '') or FERNET_KEY
 
-GOOGLE_TOKEN_ENCRYPTION_KEY = os.getenv('GOOGLE_TOKEN_ENCRYPTION_KEY', '')
+GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '')
+GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET', '')
+GOOGLE_REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI', '')
 
 
 # ---------------- Celery ----------------
@@ -184,6 +223,22 @@ CELERY_BEAT_SCHEDULE = {
     'sync-google-data': {
         'task': 'google_auth.tasks.sync_all_google_data',
         'schedule': 3600.0,
+    },
+    'poll-gmail-triggers': {
+        'task': 'automation.tasks.poll_gmail_triggers',
+        'schedule': 60.0,
+    },
+    'poll-calendar-triggers': {
+        'task': 'automation.tasks.poll_calendar_triggers',
+        'schedule': 60.0,
+    },
+    'poll-drive-triggers': {
+        'task': 'automation.tasks.poll_drive_triggers',
+        'schedule': 60.0,
+    },
+    'cleanup-expired-records': {
+        'task': 'automation.tasks.cleanup_expired_records',
+        'schedule': 86400.0, # Every 24 hours
     },
 }
 
@@ -214,6 +269,23 @@ LOGGING = {
 
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:5173",
+    origin.strip()
+    for origin in os.getenv(
+        "CORS_ALLOWED_ORIGINS",
+        "http://localhost:5173,"
+        "http://127.0.0.1:5173," 
+        "https://google-workspace-command-center-frontend.onrender.com",
+    ).split(",")
+    if origin.strip()
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv(
+        "CSRF_TRUSTED_ORIGINS",
+        ""
+    ).split(",")
+    if origin.strip()
 ]
