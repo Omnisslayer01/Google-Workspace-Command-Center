@@ -1,10 +1,15 @@
 from django.contrib import admin
 from django.urls import path, include
 
+from google_auth.views import AccountDeleteView
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/rbac/', include('rbac.urls')),
     path('api/audit/', include('audit.urls')),
+
+    # Account and data deletion (Task 9)
+    path('api/account/delete/', AccountDeleteView.as_view(), name='account_delete'),
 
     # 1. Send /api/auth/google/... traffic to Madhura's app FIRST
     path('api/auth/google/', include('google_auth.urls')),
