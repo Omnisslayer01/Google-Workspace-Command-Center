@@ -3,18 +3,31 @@ import { apiFetch } from './apiClient';
 export interface AutomationTrigger {
   type: string;
   config?: Record<string, unknown>;
+  last_polled_at?: string | null;
 }
 
 export interface AutomationCondition {
+  id?: number;
   field: string;
   operator: string;
   value: string;
 }
 
 export interface AutomationAction {
+  id?: number;
   type: string;
   config?: Record<string, unknown>;
   order: number;
+}
+
+export interface AutomationItem {
+  id: number;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+  trigger: AutomationTrigger;
+  conditions: AutomationCondition[];
+  actions: AutomationAction[];
 }
 
 export interface CreateAutomationPayload {
@@ -29,6 +42,15 @@ export interface CreateAutomationResponse {
   automation_id: number;
 }
 
+export async function getAutomations(): Promise<AutomationItem[]> {
+  const response = await apiFetch<any>('/api/automations/');
+  return Array.isArray(response)
+    ? response
+    : Array.isArray(response?.results)
+    ? response.results
+    : [];
+}
+
 export async function createAutomation(
   payload: CreateAutomationPayload
 ): Promise<CreateAutomationResponse> {
@@ -37,6 +59,41 @@ export async function createAutomation(
     {
       method: 'POST',
       body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function runAutomation(
+  id: number,
+  triggerPayload?: Record<string, unknown>
+): Promise<{ execution_id: number; status: string }> {
+  return apiFetch<{ execution_id: number; status: string }>(
+    `/api/automations/${id}/run/`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ trigger_payload: triggerPayload || {} }),
+    }
+  );
+}
+
+export async function toggleAutomation(
+  id: number,
+  isActive: boolean
+): Promise<AutomationItem> {
+  return apiFetch<AutomationItem>(
+    `/api/automations/${id}/`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ is_active: isActive }),
+    }
+  );
+}
+
+export async function deleteAutomation(id: number): Promise<void> {
+  await apiFetch<void>(
+    `/api/automations/${id}/`,
+    {
+      method: 'DELETE',
     }
   );
 }
@@ -77,4 +134,4 @@ export async function getAutomationExecutionHistory(): Promise<
   );
 
   return response.executions || [];
-}
+}

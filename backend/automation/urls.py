@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     AutomationCreateView,
+    AutomationDetailView,
     AutomationRunView,
     AutomationExecutionHistoryView,
 )
@@ -12,6 +13,11 @@ urlpatterns = [
         "",
         AutomationCreateView.as_view(),
         name="automation-create",
+    ),
+    path(
+        "<int:automation_id>/",
+        AutomationDetailView.as_view(),
+        name="automation-detail",
     ),
     path(
         "executions/",

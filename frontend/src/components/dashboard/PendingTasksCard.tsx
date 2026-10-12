@@ -14,7 +14,7 @@ export const PendingTasksCard: React.FC<PendingTasksCardProps> = ({ tasks, onTog
   const pending = tasks.filter((t) => t.status !== 'completed');
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-2xs relative overflow-hidden flex flex-col justify-between">
+    <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-2xs relative overflow-hidden flex flex-col justify-between h-full">
       {/* Top green/slate hairline */}
       <div className="absolute top-0 left-0 right-0 h-1 bg-slate-800" />
 

@@ -36,7 +36,7 @@ export const TodayScheduleCard: React.FC<TodayScheduleCardProps> = ({ events }) 
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-2xs relative overflow-hidden flex flex-col justify-between">
+    <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-2xs relative overflow-hidden flex flex-col justify-between h-full">
       {/* Top Calendar Blue accent hairline */}
       <div className="absolute top-0 left-0 right-0 h-1 bg-[#4285F4]" />
 

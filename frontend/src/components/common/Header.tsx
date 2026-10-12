@@ -85,7 +85,7 @@ export const Header: React.FC<HeaderProps> = ({
       icon: Table,
     },
     {
-      to: '/automations/new',
+      to: '/automations',
       label: 'Automation',
       icon: Zap,
     },

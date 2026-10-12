@@ -350,9 +350,9 @@ export const Dashboard: React.FC = () => {
 
         {/* SCHEDULE + TASKS */}
         {(isWidgetActive('schedule') || isWidgetActive('tasks')) && (
-          <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
             {isWidgetActive('schedule') && (
-              <div className="lg:col-span-7 relative group">
+              <div className={`${isWidgetActive('tasks') ? 'lg:col-span-7' : 'lg:col-span-12'} relative group flex flex-col h-full`}>
                 <button
                   type="button"
                   onClick={() => removeWidget('schedule')}
@@ -362,7 +362,7 @@ export const Dashboard: React.FC = () => {
                   <X className="w-3 h-3 text-slate-400" />
                 </button>
                 {calendarError ? (
-                  <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-2xs">
+                  <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-2xs h-full flex items-center">
                     <div className="flex items-center gap-2 text-amber-600 text-sm">
                       <AlertTriangle className="w-4 h-4" />
                       <span>{calendarError}</span>
@@ -375,7 +375,7 @@ export const Dashboard: React.FC = () => {
             )}
 
             {isWidgetActive('tasks') && (
-              <div className={`${isWidgetActive('schedule') ? 'lg:col-span-5' : 'lg:col-span-12'} relative group`}>
+              <div className={`${isWidgetActive('schedule') ? 'lg:col-span-5' : 'lg:col-span-12'} relative group flex flex-col h-full`}>
                 <button
                   type="button"
                   onClick={() => removeWidget('tasks')}
@@ -385,7 +385,7 @@ export const Dashboard: React.FC = () => {
                   <X className="w-3 h-3 text-slate-400" />
                 </button>
                 {tasksError ? (
-                  <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-2xs">
+                  <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-2xs h-full flex items-center">
                     <div className="flex items-center gap-2 text-amber-600 text-sm">
                       <AlertTriangle className="w-4 h-4" />
                       <span>{tasksError}</span>
