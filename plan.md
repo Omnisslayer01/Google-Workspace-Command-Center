@@ -2,7 +2,7 @@
 
 ## Mission
 
-Fix the broken and hard-coded behaviours documented in **"Missing Features or features that arent working at all.pdf"**. Work in the existing repository; do not rebuild the product or redesign working pages. Prioritize real Google Workspace data, correct persistence, consistent navigation, and end-to-end verification.
+Fix all defects documented in **"Missing Features or features that arent working at all.pdf"** and the follow-up **"Issues with GWCC.pdf"**. Work in the existing repository; do not rebuild the product or redesign working pages. Prioritize real Google Workspace data, correct persistence, usable automation management, a coherent dashboard layout, consistent navigation, and end-to-end verification.
 
 ## Instructions to the coding agent
 
@@ -205,6 +205,55 @@ Add serializers, validation, URLs, migrations, relevant admin registration, and 
 
 ---
 
+## P1 - Automation management page and meaningful action configuration
+
+### Problems reported in `Issues with GWCC.pdf` (page 1)
+
+- Opening Automation goes straight to the Create Automation form instead of showing previously created automations.
+- In the Actions section, action choices are described only by the Google app name (for example Calendar, Gmail, or Tasks), so users cannot tell what the automation will actually do.
+
+### Required work
+
+1. Inspect the existing Automation routes, React pages, BE2 automation models/serializers/views, and supported trigger/action registry before changing anything. Reuse the current automation API and action contract; do not invent a parallel automation backend.
+2. Make the Automation navigation entry open an Automation List/Overview page by default. It must fetch the authenticated user's actual saved automations from the backend.
+3. The list must support the actions already supported by the API, such as opening/editing an automation and navigating to its execution history when available. Provide a visible `Create Automation` action that opens the existing creation form.
+4. Add clear loading, empty, error, and authentication-required states. With no saved automations, show a real empty state and a `Create Automation` call to action; do not display sample workflows as real records.
+5. Keep the create/edit form available at its own route or mode. After a successful save, navigate back to the list or show the saved automation consistently in the list after refetch.
+6. Rewrite action option labels/descriptions so they express the action and result, not just the target service. Examples of the wording pattern (only use operations supported by the actual backend):
+   - `Calendar — Create event`
+   - `Calendar — Update event`
+   - `Gmail — Send email`
+   - `Tasks — Create internal task`
+   Display a concise description of the effect and show configuration fields appropriate to the selected action (recipient/subject/body for email; title/start/end for event creation; title/due date for task creation, where supported).
+7. Action option values and serialized `type` fields must remain compatible with BE2's existing action registry and execution engine. Change presentation labels separately from persisted identifiers. Do not offer an action that the backend cannot execute, and do not change the execution contract without updating tests/integration points.
+8. Preserve the existing conditions and multi-action ordering features. Validate action configuration before save and show useful per-step errors returned by the backend.
+9. Add regression tests for listing existing automations, empty state, opening create form, saving and seeing the new automation, and action option labels/configuration. Run build/tests after the changes.
+
+**Acceptance criteria:** Visiting Automation shows saved automations first instead of the creation form. Existing automations appear from the actual backend. The user can open Create Automation explicitly. Action choices state the operation to perform, and the selected action's inputs match the backend's supported configuration schema.
+
+---
+
+## P1 - Dashboard refinements from `Issues with GWCC.pdf`
+
+### Problems reported
+
+- Recent Drive Files takes up too much space on the dashboard.
+- The Sheets widget on the dashboard is empty/unhelpful.
+- Calendar and Pending Tasks widgets are misaligned.
+
+### Required work
+
+1. **Recent Drive Files:** Display a compact initial list (default to five actual files unless the existing design/API provides a better page size). Add a blue, text-style `Show more` / `Show all` link rather than a prominent filled button. Make it functional: expand the list or navigate to the Drive page. If expanded, fetch/consume the actual paginated Drive API data and avoid loading the entire Drive unnecessarily. Do not substitute recent/mock records for the real listing.
+2. **Sheets widget:** Inspect the real Sheets API responses and existing dashboard layout. Prefer a compact and genuinely useful live summary such as accessible spreadsheet count and selected spreadsheet/tab context, or a small data-derived summary when the API contract supports it. Do not invent sheet KPIs or expose a static empty panel as if it is useful.
+3. If Sheets cannot provide any reliable, meaningful dashboard summary with the existing API, replace this dashboard slot with a Gmail/mail summary **only if** a real Gmail summary endpoint is available and can be called under the current user's auth. Reuse the existing Gmail contract; do not invent a Gmail endpoint. If neither source can return live data, show an honest unavailable state instead of fake data.
+4. **Layout alignment:** Place Today's Schedule/Calendar and Pending Tasks inside the same responsive grid row/container and align their top edges. Use consistent grid columns, gaps, card header spacing, and padding. Avoid position hacks that break on different screen sizes or when one widget has more content.
+5. Preserve existing colors, typography, and the current GWCC visual style. Make the smallest change that fixes density and alignment.
+6. Add or update UI tests/manual checks for the limited Drive list + functional text link, Sheets/Gmail fallback decision, and Calendar/Pending Tasks alignment at desktop and narrower viewport widths.
+
+**Acceptance criteria:** Dashboard initially shows a compact list of real Drive files and a functional text link for more. The Sheets slot either displays a useful real-data summary or is replaced by a working real-data Gmail summary; it never fabricates data. Calendar and Pending Tasks align cleanly at the same top baseline and remain aligned responsively.
+
+---
+
 ## P1 - Shared app shell: consistent navigation, profile, and authentication controls
 
 ### Problems reported
@@ -324,12 +373,19 @@ Do not declare this complete just because the build passes. Mark each item **PAS
 - Google Tasks synchronization works if configured; otherwise the exact external blocker is documented
 - Shared navigation, logo destination, profile, login/logout are consistent
 - Drive lists real files/folders and supports folder navigation
+- Automation navigation opens a real saved-automation list; create/edit remains separately accessible
+- Automation action choices describe the actual operation and use backend-compatible action identifiers/configuration
+- Dashboard Drive files are capped initially with a working text-style show-more link
+- Dashboard Sheets slot shows a meaningful real-data summary or an available real Gmail summary, not fake/empty demo content
+- Dashboard Calendar and Pending Tasks widgets align responsively
 - Backend checks/tests pass
 - Frontend production build passes
 - No `.env` or secret/token is committed
 - No regression or untracked accidental files remain
 
 ## Final report expected from the coding agent
+
+Include the new automation/dashboard defects from `Issues with GWCC.pdf` in the report.
 
 Return a concise table with columns:
 

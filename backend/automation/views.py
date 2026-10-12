@@ -1,15 +1,27 @@
+from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 
-from .serializers import AutomationCreateSerializer
+from .serializers import AutomationCreateSerializer, AutomationListSerializer
 from .models import Automation, AutomationExecution
 from .executor import AutomationExecutor
 
 
 class AutomationCreateView(APIView):
     permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        automations = (
+            Automation.objects
+            .filter(owner=request.user)
+            .select_related("trigger")
+            .prefetch_related("conditions", "actions")
+            .order_by("-created_at")
+        )
+        serializer = AutomationListSerializer(automations, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
         serializer = AutomationCreateSerializer(
@@ -30,16 +42,81 @@ class AutomationCreateView(APIView):
         )
 
 
+class AutomationDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, automation_id):
+        try:
+            automation = (
+                Automation.objects
+                .select_related("trigger")
+                .prefetch_related("conditions", "actions")
+                .get(id=automation_id, owner=request.user)
+            )
+        except Automation.DoesNotExist:
+            return Response(
+                {"error": "Automation not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        serializer = AutomationListSerializer(automation)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def patch(self, request, automation_id):
+        try:
+            automation = Automation.objects.get(id=automation_id, owner=request.user)
+        except Automation.DoesNotExist:
+            return Response(
+                {"error": "Automation not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        if "is_active" in request.data:
+            automation.is_active = bool(request.data["is_active"])
+            automation.save(update_fields=["is_active"])
+        if "name" in request.data:
+            automation.name = str(request.data["name"]).strip()
+            automation.save(update_fields=["name"])
+        serializer = AutomationListSerializer(automation)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def delete(self, request, automation_id):
+        try:
+            automation = Automation.objects.get(id=automation_id, owner=request.user)
+        except Automation.DoesNotExist:
+            return Response(
+                {"error": "Automation not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        automation.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 class AutomationRunView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, automation_id):
-        automation = Automation.objects.get(
-            id=automation_id,
-            owner=request.user,
+        try:
+            automation = Automation.objects.get(
+                id=automation_id,
+                owner=request.user,
+            )
+        except Automation.DoesNotExist:
+            return Response(
+                {"error": "Automation not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        execution = AutomationExecution.objects.create(
+            automation=automation,
+            status="running",
+            started_at=timezone.now(),
         )
 
-        execution = AutomationExecutor(automation).run()
+        trigger_payload = (
+            request.data.get("trigger_payload", {})
+            if isinstance(request.data, dict)
+            else {}
+        )
+        execution = AutomationExecutor(execution, trigger_payload).run()
 
         return Response(
             {

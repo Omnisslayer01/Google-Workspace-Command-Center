@@ -15,8 +15,10 @@ import { TasksPage } from "./pages/TasksPage";
 import { SheetsPage } from "./pages/SheetsPage";
 import { Concept5Workspace } from "./pages/Concept5Workspace";
 import { DrivePage } from "./pages/DrivePage";
+import { AutomationsPage } from "./pages/AutomationsPage";
 import { AutomationBuilderPage } from "./pages/AutomationBuilderPage";
 import { AutomationExecutionHistoryPage } from "./pages/AutomationExecutionHistoryPage";
+
 
 
 /**
@@ -150,12 +152,26 @@ export const App: React.FC = () => {
         />
 
         <Route
+          path="/automations"
+          element={
+            <ProtectedRoute>
+              <AutomationsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/automations/new"
           element={
             <ProtectedRoute>
               <AutomationBuilderPage />
             </ProtectedRoute>
           }
+        />
+
+        <Route
+          path="/automation"
+          element={<Navigate to="/automations" replace />}
         />
 
         <Route

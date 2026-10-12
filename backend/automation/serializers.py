@@ -21,6 +21,42 @@ class ActionSerializer(serializers.Serializer):
     order = serializers.IntegerField()
 
 
+class TriggerDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Trigger
+        fields = ["id", "type", "config", "last_polled_at"]
+
+
+class ConditionDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Condition
+        fields = ["id", "field", "operator", "value"]
+
+
+class ActionDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Action
+        fields = ["id", "type", "config", "order"]
+
+
+class AutomationListSerializer(serializers.ModelSerializer):
+    trigger = TriggerDetailSerializer(read_only=True)
+    conditions = ConditionDetailSerializer(many=True, read_only=True)
+    actions = ActionDetailSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Automation
+        fields = [
+            "id",
+            "name",
+            "is_active",
+            "created_at",
+            "trigger",
+            "conditions",
+            "actions",
+        ]
+
+
 class AutomationCreateSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255)
     trigger = TriggerSerializer()
@@ -59,4 +95,4 @@ class AutomationCreateSerializer(serializers.Serializer):
                 **action
             )
 
-        return automation
+        return automation
