@@ -93,9 +93,17 @@ def get_google_client(user):
 
     FS1, FS2, FS3 and BE2 should use only this function.
 
-    It checks token expiry, refreshes the access token when required,
-    stores the refreshed encrypted token and returns ready-to-use
-    Google Credentials.
+    Django stores token_expiry as a timezone-aware datetime.
+    google-auth expects Credentials.expiry as a naive UTC datetime.
+
+    Therefore:
+    DB datetime (aware UTC)
+            ↓
+    Google Credentials (naive UTC)
+            ↓
+    refreshed expiry
+            ↓
+    DB datetime (aware UTC)
     """
 
     from .models import GoogleCredential
@@ -110,13 +118,31 @@ def get_google_client(user):
         cred_obj.refresh_token
     )
 
-    expiry = cred_obj.token_expiry
+    # --------------------------------------------------
+    # Get expiry from Django database
+    # --------------------------------------------------
+    db_expiry = cred_obj.token_expiry
 
-    # Convert naive database datetime to timezone-aware UTC
-    if expiry and timezone.is_naive(expiry):
-        expiry = timezone.make_aware(
-            expiry,
-            dt_timezone.utc
+    if db_expiry:
+        # Django DB value should be timezone-aware UTC
+        if timezone.is_naive(db_expiry):
+            db_expiry = timezone.make_aware(
+                db_expiry,
+                dt_timezone.utc
+            )
+        else:
+            db_expiry = db_expiry.astimezone(
+                dt_timezone.utc
+            )
+
+    # --------------------------------------------------
+    # Google-auth expects NAIVE UTC datetime
+    # --------------------------------------------------
+    google_expiry = None
+
+    if db_expiry:
+        google_expiry = db_expiry.replace(
+            tzinfo=None
         )
 
     credentials = Credentials(
@@ -130,13 +156,13 @@ def get_google_client(user):
             if cred_obj.granted_scopes
             else GOOGLE_SCOPES
         ),
-        expiry=expiry,
+        expiry=google_expiry,
     )
 
-    # Manually check token expiry
-    # We don't use credentials.valid because of the
-    # timezone compatibility issue in the installed google-auth version.
-    if expiry and timezone.now() >= expiry:
+    # --------------------------------------------------
+    # Check expiry using Django's timezone-aware value
+    # --------------------------------------------------
+    if db_expiry and timezone.now() >= db_expiry:
 
         credentials.refresh(
             GoogleAuthRequest()
@@ -146,14 +172,21 @@ def get_google_client(user):
             credentials.token
         )
 
+        # google-auth normally returns naive UTC expiry
         new_expiry = credentials.expiry
 
-        # Store refreshed expiry as timezone-aware UTC
-        if new_expiry and timezone.is_naive(new_expiry):
-            new_expiry = timezone.make_aware(
-                new_expiry,
-                dt_timezone.utc
-            )
+        # Convert it to timezone-aware UTC before
+        # storing it in Django's DateTimeField.
+        if new_expiry:
+            if timezone.is_naive(new_expiry):
+                new_expiry = timezone.make_aware(
+                    new_expiry,
+                    dt_timezone.utc
+                )
+            else:
+                new_expiry = new_expiry.astimezone(
+                    dt_timezone.utc
+                )
 
         cred_obj.token_expiry = new_expiry
 
@@ -166,7 +199,6 @@ def get_google_client(user):
         )
 
     return credentials
-
 
 def revoke_google_token(token):
     """

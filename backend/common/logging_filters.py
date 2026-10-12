@@ -3,7 +3,10 @@ import re
 
 
 class SensitiveDataFilter(logging.Filter):
-    """access_token / refresh_token log madhe kadhich jayla nako."""
+    """
+    Removes access and refresh tokens before logs are written.
+    access_token / refresh_token log madhe kadhich jayla nako.
+    """
 
     PATTERNS = [
         re.compile(r'(access_token["\']?\s*[:=]\s*["\']?)[^"\',\s]+', re.IGNORECASE),
