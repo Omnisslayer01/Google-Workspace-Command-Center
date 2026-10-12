@@ -37,10 +37,13 @@ class GoogleConnectView(APIView):
             prompt='consent',
         )
 
-        # Renamed to 'auth_url' so Jay's frontend can read it
+        # 'auth_url' key is kept as-is so the existing frontend keeps working.
+        # 'scope_descriptions' lets FS1's connection screen explain each
+        # permission before the user connects.
         return Response({
             'success': True,
             'auth_url': authorization_url,
+            'scope_descriptions': SCOPE_DESCRIPTIONS,
         })
 
 
