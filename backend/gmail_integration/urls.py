@@ -7,6 +7,8 @@ from .views import (
     MessageListView,
     MessageSearchView,
     MessageSendView,
+    LabelsView,
+    ActivityMetricsView,
 )
 
 app_name = "gmail_integration"
@@ -33,4 +35,10 @@ urlpatterns = [
         AttachmentView.as_view(),
         name="attachment-download",
     ),
+
+    # List Gmail labels
+    path("labels/", LabelsView.as_view(), name="labels"),
+    
+    #Gmail dashboard metrics
+    path("activity-metrics/", ActivityMetricsView.as_view(), name="activity-metrics"),
 ]

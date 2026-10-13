@@ -94,10 +94,13 @@ class MessageDetailView(APIView):
                     status_code=404,
                 )
             logger.error("Gmail API error in get_message: %s", exc)
-            return success_response(data=None, message="Gmail API error.", status_code=502)
+            return success_response(
+                data=None,
+                message="Gmail API error.",
+                status_code=502,
+            )
 
         return success_response(data=message)
-
 
 class MessageSearchView(APIView):
     """
@@ -147,6 +150,65 @@ class MessageSearchView(APIView):
                 "result_size_estimate": result.get("resultSizeEstimate"),
             }
         )
+
+class LabelsView(APIView):
+    """
+    GET /api/gmail/labels/
+    Returns all Gmail labels for the authenticated user.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            service = _get_service(request.user)
+            result = service.list_labels()
+        except ValueError as exc:
+            return success_response(data=None, message=str(exc), status_code=400)
+        except HttpError as exc:
+            logger.error("Gmail API error in list_labels: %s", exc)
+            return success_response(
+                data=None,
+                message="Gmail API error.",
+                status_code=502,
+            )
+
+        return success_response(data=result.get("labels", []))
+
+class ActivityMetricsView(APIView):
+    """
+    GET /api/gmail/activity-metrics/
+    Returns lightweight Gmail dashboard metrics.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            service = _get_service(request.user)
+
+            inbox = service.list_messages(max_results=100)
+            starred = service.list_messages(
+                max_results=100,
+                filter_type="starred",
+            )
+            labels = service.list_labels()
+
+        except ValueError as exc:
+            return success_response(data=None, message=str(exc), status_code=400)
+        except HttpError as exc:
+            logger.error("Gmail API error in activity_metrics: %s", exc)
+            return success_response(
+                data=None,
+                message="Gmail API error.",
+                status_code=502,
+            )
+
+        metrics = {
+            "total_messages": inbox.get("resultSizeEstimate", 0),
+            "starred_messages": starred.get("resultSizeEstimate", 0),
+            "label_count": len(labels.get("labels", [])),
+        }
+
+        return success_response(data=metrics)
 
 
 class MessageSendView(APIView):

@@ -18,8 +18,9 @@ GOOGLE_SCOPES = [
     'https://www.googleapis.com/auth/userinfo.email',
     'https://www.googleapis.com/auth/gmail.readonly',
     'https://www.googleapis.com/auth/calendar',
-    'https://www.googleapis.com/auth/drive.readonly',
+    'https://www.googleapis.com/auth/drive',
     'https://www.googleapis.com/auth/spreadsheets',
+    'https://www.googleapis.com/auth/tasks',
 ]
 
 
@@ -33,31 +34,41 @@ SCOPE_DESCRIPTIONS = {
         'View your Drive files',
     'https://www.googleapis.com/auth/spreadsheets':
         'Read and write your Sheets data',
+    'https://www.googleapis.com/auth/tasks':
+        'Manage your Google Tasks',
 }
 
 
 def get_flow():
-    """Google OAuth Flow object banvto, client config .env varun gheto."""
+    redirect_uri = getattr(settings, 'GOOGLE_REDIRECT_URI', None) or os.getenv("GOOGLE_REDIRECT_URI")
+    client_id = getattr(settings, 'GOOGLE_CLIENT_ID', None) or os.getenv("GOOGLE_CLIENT_ID")
+    client_secret = getattr(settings, 'GOOGLE_CLIENT_SECRET', None) or os.getenv("GOOGLE_CLIENT_SECRET")
+
+    if not redirect_uri:
+        raise ValueError("GOOGLE_REDIRECT_URI is not configured")
+
+    if not client_id:
+        raise ValueError("GOOGLE_CLIENT_ID is not configured")
+
+    if not client_secret:
+        raise ValueError("GOOGLE_CLIENT_SECRET is not configured")
 
     client_config = {
         "web": {
-            "client_id": os.getenv("GOOGLE_CLIENT_ID"),
-            "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),
+            "client_id": client_id,
+            "client_secret": client_secret,
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
             "token_uri": "https://oauth2.googleapis.com/token",
-            "redirect_uris": [os.getenv("GOOGLE_REDIRECT_URI")],
+            "redirect_uris": [redirect_uri],
         }
     }
 
-    flow = Flow.from_client_config(
+    return Flow.from_client_config(
         client_config,
         scopes=GOOGLE_SCOPES,
-        redirect_uri=os.getenv("GOOGLE_REDIRECT_URI"),
+        redirect_uri=redirect_uri,
         autogenerate_code_verifier=False,
     )
-
-    return flow
-
 
 def _get_fernet():
     return Fernet(
@@ -199,6 +210,7 @@ def get_google_client(user):
         )
 
     return credentials
+
 
 def revoke_google_token(token):
     """

@@ -1,93 +1,48 @@
 import { WorkspaceTask, TaskCreateInput, TaskUpdateInput } from '../types';
-import { MOCK_TASKS } from '../data/mockData';
-
-const TASKS_STORAGE_KEY = 'gwcc_mock_tasks_v1';
-
-function getStoredTasks(): WorkspaceTask[] {
-  try {
-    const raw = localStorage.getItem(TASKS_STORAGE_KEY);
-    if (raw) {
-      return JSON.parse(raw);
-    }
-  } catch {
-    // ignore
-  }
-  return [...MOCK_TASKS];
-}
-
-function saveStoredTasks(tasks: WorkspaceTask[]) {
-  try {
-    localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(tasks));
-  } catch {
-    // ignore
-  }
-}
+import { apiFetch } from './apiClient';
 
 /**
- * Tasks API Adapter
- * Uses local state adapter until BE2's final API contract is available.
+ * Tasks API Client
+ * Connects to BE2 Task 8 /api/tasks/ endpoint.
  */
 export const tasksApi = {
-  async listTasks(): Promise<{ data: WorkspaceTask[]; source: 'adapter' }> {
-    return { data: getStoredTasks(), source: 'adapter' };
+  async listTasks(): Promise<{ data: WorkspaceTask[]; source: 'live' }> {
+    const data = await apiFetch<WorkspaceTask[]>('/api/tasks/');
+    return { data, source: 'live' };
   },
 
   async createTask(input: TaskCreateInput): Promise<WorkspaceTask> {
-    const tasks = getStoredTasks();
-    const newTask: WorkspaceTask = {
-      id: `task-${Date.now()}`,
-      title: input.title,
-      description: input.description,
-      priority: input.priority,
-      status: input.status || 'todo',
-      dueDate: input.dueDate,
-      service: input.service,
-      assignedTo: input.assignedTo || 'Yash',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    tasks.unshift(newTask);
-    saveStoredTasks(tasks);
-    return newTask;
+    return await apiFetch<WorkspaceTask>('/api/tasks/', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
   },
 
   async updateTask(id: string, input: TaskUpdateInput): Promise<WorkspaceTask> {
-    const tasks = getStoredTasks();
-    const index = tasks.findIndex((t) => t.id === id);
-    if (index === -1) {
-      throw new Error(`Task not found: ${id}`);
-    }
-    const updated: WorkspaceTask = {
-      ...tasks[index],
-      ...input,
-      updatedAt: new Date().toISOString(),
-    };
-    tasks[index] = updated;
-    saveStoredTasks(tasks);
-    return updated;
+    return await apiFetch<WorkspaceTask>(`/api/tasks/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    });
   },
 
   async toggleComplete(id: string): Promise<WorkspaceTask> {
-    const tasks = getStoredTasks();
-    const index = tasks.findIndex((t) => t.id === id);
-    if (index === -1) {
-      throw new Error(`Task not found: ${id}`);
-    }
-    const current = tasks[index];
-    const newStatus = current.status === 'completed' ? 'todo' : 'completed';
-    const updated: WorkspaceTask = {
-      ...current,
-      status: newStatus,
-      updatedAt: new Date().toISOString(),
-    };
-    tasks[index] = updated;
-    saveStoredTasks(tasks);
-    return updated;
+    // We need to fetch current task to know its status, or just pass a status toggle
+    // Assuming backend patch accepts just status
+    // To do this properly without fetching first, we should really know the current status.
+    // Wait, the UI passes the ID to toggle. The UI already has the task in state, but the API method just takes ID.
+    // Let's change the API method to take currentStatus, OR we fetch it first.
+    const task = await apiFetch<WorkspaceTask>(`/api/tasks/${id}/`);
+    const newStatus = task.status === 'completed' ? 'todo' : 'completed';
+    
+    return await apiFetch<WorkspaceTask>(`/api/tasks/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: newStatus }),
+    });
   },
 
   async deleteTask(id: string): Promise<void> {
-    const tasks = getStoredTasks();
-    const filtered = tasks.filter((t) => t.id !== id);
-    saveStoredTasks(filtered);
+    await apiFetch<void>(`/api/tasks/${id}/`, {
+      method: 'DELETE',
+    });
   },
 };

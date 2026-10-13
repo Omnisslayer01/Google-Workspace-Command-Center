@@ -6,7 +6,7 @@ import { ServiceStatusInfo } from '../../types';
 interface WorkspaceStatusBannerProps {
   services?: ServiceStatusInfo[];
   authError?: string | null;
-  dataSource?: 'live' | 'mock' | 'adapter';
+  dataSource?: 'live' | 'mock' | 'adapter' | 'error';
 }
 
 export const WorkspaceStatusBanner: React.FC<WorkspaceStatusBannerProps> = ({

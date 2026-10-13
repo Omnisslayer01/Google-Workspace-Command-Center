@@ -9,24 +9,12 @@ interface PendingTasksCardProps {
 }
 
 export const PendingTasksCard: React.FC<PendingTasksCardProps> = ({ tasks, onToggleTask }) => {
-  const priorityStyles = {
-    urgent: 'bg-red-50 text-red-700 border-red-200',
-    high: 'bg-amber-50 text-amber-700 border-amber-200',
-    medium: 'bg-blue-50 text-blue-700 border-blue-200',
-    low: 'bg-slate-100 text-slate-700 border-slate-200',
-  };
 
-  const serviceColors = {
-    gmail: 'bg-red-500',
-    calendar: 'bg-blue-500',
-    drive: 'bg-amber-500',
-    sheets: 'bg-emerald-500',
-  };
 
   const pending = tasks.filter((t) => t.status !== 'completed');
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-2xs relative overflow-hidden flex flex-col justify-between">
+    <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-2xs relative overflow-hidden flex flex-col justify-between h-full">
       {/* Top green/slate hairline */}
       <div className="absolute top-0 left-0 right-0 h-1 bg-slate-800" />
 
@@ -87,30 +75,8 @@ export const PendingTasksCard: React.FC<PendingTasksCardProps> = ({ tasks, onTog
                       >
                         {task.title}
                       </div>
-
-                      <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-1">
-                        {task.service && (
-                          <span className="flex items-center gap-1 font-medium capitalize">
-                            <span
-                              className={`w-1.5 h-1.5 rounded-full ${
-                                serviceColors[task.service] || 'bg-slate-400'
-                              }`}
-                            />
-                            <span>{task.service}</span>
-                          </span>
-                        )}
-                        {task.assignedTo && <span>• {task.assignedTo}</span>}
-                      </div>
                     </div>
                   </div>
-
-                  <span
-                    className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded border shrink-0 ${
-                      priorityStyles[task.priority]
-                    }`}
-                  >
-                    {task.priority}
-                  </span>
                 </div>
               );
             })}

@@ -8,11 +8,13 @@ interface TodayScheduleCardProps {
 }
 
 export const TodayScheduleCard: React.FC<TodayScheduleCardProps> = ({ events }) => {
-  const formatTime = (isoString?: string) => {
+  const formatDateTime = (isoString?: string) => {
     if (!isoString) return '';
     try {
       const d = new Date(isoString);
-      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) +
+        ' ' +
+        d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     } catch {
       return '';
     }
@@ -34,7 +36,7 @@ export const TodayScheduleCard: React.FC<TodayScheduleCardProps> = ({ events }) 
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-2xs relative overflow-hidden flex flex-col justify-between">
+    <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-2xs relative overflow-hidden flex flex-col justify-between h-full">
       {/* Top Calendar Blue accent hairline */}
       <div className="absolute top-0 left-0 right-0 h-1 bg-[#4285F4]" />
 
@@ -66,8 +68,8 @@ export const TodayScheduleCard: React.FC<TodayScheduleCardProps> = ({ events }) 
           <div className="space-y-3">
             {events.slice(0, 4).map((ev) => {
               const conflicted = hasConflict(ev, events);
-              const startFormatted = formatTime(ev.start.dateTime || ev.start.date);
-              const endFormatted = formatTime(ev.end.dateTime || ev.end.date);
+              const startFormatted = formatDateTime(ev.start.dateTime || ev.start.date);
+              const endFormatted = formatDateTime(ev.end.dateTime || ev.end.date);
 
               return (
                 <div

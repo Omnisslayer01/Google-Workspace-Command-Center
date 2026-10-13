@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.urls import include, path
+from django.urls import path, include
 
 from google_auth.views import AccountDeleteView
 
@@ -36,4 +37,7 @@ urlpatterns = [
 
     # automation model added 
     path("api/automations/", include("automation.urls")),
+
+    # Internal Tasks API
+    path("api/tasks/", include("tasks.urls")),
 ]
