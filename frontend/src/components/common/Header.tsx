@@ -6,6 +6,7 @@ import {
   Table,
   LayoutDashboard,
   Bell,
+  Mail,
   Menu,
   X,
   HardDrive,
@@ -65,10 +66,21 @@ export const Header: React.FC<HeaderProps> = ({
       icon: LayoutDashboard,
     },
     {
+  to: '/gmail',
+  label: 'Gmail',
+  icon: Mail,
+},
+    {
       to: '/calendar',
       label: 'Calendar',
       icon: CalendarDays,
     },
+
+    {
+  to: '/notifications',
+  label: 'Notifications',
+  icon: Bell,
+},
     {
       to: '/tasks',
       label: 'Tasks',
