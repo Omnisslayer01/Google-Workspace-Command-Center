@@ -20,6 +20,7 @@ import { DrivePage } from "./pages/DrivePage";
 import { AutomationsPage } from "./pages/AutomationsPage";
 import { AutomationBuilderPage } from "./pages/AutomationBuilderPage";
 import { AutomationExecutionHistoryPage } from "./pages/AutomationExecutionHistoryPage";
+import { OrganizationAdminPage } from "./pages/OrganizationAdminPage";
 
 
 
@@ -125,6 +126,15 @@ export const App: React.FC = () => {
             </ProtectedRoute>
           }
         />
+
+        <Route
+  path="/organization"
+  element={
+    <ProtectedRoute>
+      <OrganizationAdminPage />
+    </ProtectedRoute>
+  }
+/>
 
         <Route
   path="/gmail"
