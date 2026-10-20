@@ -20,11 +20,14 @@ import {
 
 const roleStyles: Record<OrganizationRole, string> = {
   Admin: "bg-violet-50 text-violet-700 border-violet-200",
-  Member: "bg-blue-50 text-blue-700 border-blue-200",
-  Viewer: "bg-slate-100 text-slate-700 border-slate-200",
+  Manager: "bg-blue-50 text-blue-700 border-blue-200",
+  Member: "bg-slate-100 text-slate-700 border-slate-200",
 };
 
 export const OrganizationAdminPage: React.FC = () => {
+  const organizationId = Number(
+    new URLSearchParams(window.location.search).get("organization_id")
+  );
   const [members, setMembers] = useState<OrganizationMember[]>([]);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("All");
@@ -32,20 +35,28 @@ export const OrganizationAdminPage: React.FC = () => {
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-
   const loadMembers = async () => {
     setLoading(true);
     setError("");
-
     try {
-      const response = await getOrganizationMembers();
+      const organizationId = Number(
+        new URLSearchParams(window.location.search).get("organization_id")
+      );
+      const response = await getOrganizationMembers(organizationId);
       setMembers(response.results);
-    } catch {
-      setError("Unable to load organization members.");
+    } catch (err) {
+      console.error("Failed to load organization members:", err);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to load organization members."
+      );
     } finally {
       setLoading(false);
     }
   };
+
 
   useEffect(() => {
     void loadMembers();
@@ -74,9 +85,7 @@ export const OrganizationAdminPage: React.FC = () => {
     (member) => member.role === "Admin"
   ).length;
 
-  const pendingCount = members.filter(
-    (member) => member.status === "Pending"
-  ).length;
+  const pendingCount = 0;
 
   const handleRoleChange = async (
     memberId: number,
@@ -94,7 +103,8 @@ export const OrganizationAdminPage: React.FC = () => {
 
     try {
       const updatedMember = await updateOrganizationMemberRole(
-        memberId,
+        organizationId,
+        currentMember.userId,
         { role }
       );
 
@@ -105,9 +115,15 @@ export const OrganizationAdminPage: React.FC = () => {
       );
 
       setNotice(`Role updated to ${role} for ${updatedMember.name}.`);
-    } catch {
-      setError("Unable to update this member's role.");
-    } finally {
+    } catch (err) {
+        console.error("Failed to update member role:", err);
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Unable to update this member's role."
+        );
+      } finally {
       setUpdatingId(null);
     }
   };
@@ -213,7 +229,7 @@ export const OrganizationAdminPage: React.FC = () => {
                   <option value="All">All roles</option>
                   <option value="Admin">Admin</option>
                   <option value="Member">Member</option>
-                  <option value="Viewer">Viewer</option>
+                  <option value="Manager">Manager</option>
                 </select>
               </div>
             </div>
@@ -234,7 +250,7 @@ export const OrganizationAdminPage: React.FC = () => {
               role="status"
               className="mx-5 mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700"
             >
-              {notice} This change is currently mock-only.
+              {notice} Role changes are saved to the backend.
             </div>
           )}
 
@@ -323,7 +339,7 @@ export const OrganizationAdminPage: React.FC = () => {
                         >
                           <option value="Admin">Admin</option>
                           <option value="Member">Member</option>
-                          <option value="Viewer">Viewer</option>
+                          <option value="Manager">Manager</option>
                         </select>
                         {updatingId === member.id && (
                           <span className="ml-2 text-xs text-slate-400">
@@ -333,13 +349,13 @@ export const OrganizationAdminPage: React.FC = () => {
                       </td>
 
                       <td className="px-6 py-4 text-slate-500">
-                        {new Date(
-                          `${member.joinedAt}T00:00:00`
-                        ).toLocaleDateString(undefined, {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })}
+                        {member.joinedAt && !Number.isNaN(Date.parse(member.joinedAt))
+                          ? new Date(member.joinedAt).toLocaleDateString(undefined, {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })
+                          : "—"}
                       </td>
                     </tr>
                   ))
@@ -352,7 +368,7 @@ export const OrganizationAdminPage: React.FC = () => {
             <span>
               Showing {filteredMembers.length} of {members.length} members
             </span>
-            <span>Role changes use mock data in this version</span>
+            <span>Role changes are saved to the backend.</span>
           </div>
         </section>
 
@@ -363,9 +379,8 @@ export const OrganizationAdminPage: React.FC = () => {
               Role-based access control
             </p>
             <p className="mt-1 text-sm leading-6 text-blue-800">
-              This page demonstrates the member-management UI. Actual
-              permissions must be enforced by the backend when BE1's
-              RBAC endpoints are available.
+              Role-based access control is handled by the backend.
+    Organization members can manage roles according to their permissions.
             </p>
           </div>
         </div>

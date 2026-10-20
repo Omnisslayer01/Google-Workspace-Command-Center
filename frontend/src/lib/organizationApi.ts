@@ -1,9 +1,11 @@
+import { apiFetch } from "./apiClient";
 
-export type OrganizationRole = "Admin" | "Member" | "Viewer";
-export type MembershipStatus = "Active" | "Pending";
+export type OrganizationRole = "Admin" | "Manager" | "Member";
+export type MembershipStatus = "Active";
 
 export interface OrganizationMember {
   id: number;
+  userId: number;
   name: string;
   email: string;
   role: OrganizationRole;
@@ -15,74 +17,76 @@ export interface UpdateMemberRolePayload {
   role: OrganizationRole;
 }
 
-// Mock response format for the future BE1 RBAC API.
-export interface OrganizationMembersResponse {
-  success: boolean;
-  count: number;
-  results: OrganizationMember[];
+interface ApiMember {
+  id: number;
+  user_id: number;
+  name: string;
+  email: string;
+  role: "admin" | "manager" | "member";
+  created_at: string;
 }
 
-const mockMembers: OrganizationMember[] = [
-  {
-    id: 1,
-    name: "Bhavani Marbe",
-    email: "bhavani@example.com",
-    role: "Admin",
-    status: "Active",
-    joinedAt: "2026-09-01",
-  },
-  {
-    id: 2,
-    name: "Aarav Sharma",
-    email: "aarav@example.com",
-    role: "Member",
-    status: "Active",
-    joinedAt: "2026-09-05",
-  },
-  {
-    id: 3,
-    name: "Priya Patel",
-    email: "priya@example.com",
-    role: "Viewer",
-    status: "Active",
-    joinedAt: "2026-09-10",
-  },
-  {
-    id: 4,
-    name: "Rohan Kumar",
-    email: "rohan@example.com",
-    role: "Member",
-    status: "Pending",
-    joinedAt: "2026-09-15",
-  },
-];
+const toUiRole = (role: ApiMember["role"]): OrganizationRole => {
+  const roles: Record<ApiMember["role"], OrganizationRole> = {
+    admin: "Admin",
+    manager: "Manager",
+    member: "Member",
+  };
+  return roles[role];
+};
 
-const delay = (ms = 250) =>
-  new Promise<void>((resolve) => setTimeout(resolve, ms));
+const toApiRole = (role: OrganizationRole): ApiMember["role"] => {
+  const roles: Record<OrganizationRole, ApiMember["role"]> = {
+    Admin: "admin",
+    Manager: "manager",
+    Member: "member",
+  };
+  return roles[role];
+};
 
-export async function getOrganizationMembers(): Promise<OrganizationMembersResponse> {
-  await delay();
+const toOrganizationMember = (member: ApiMember): OrganizationMember => ({
+  id: member.id,
+  userId: member.user_id,
+  name: member.name,
+  email: member.email,
+  role: toUiRole(member.role),
+  status: "Active",
+  joinedAt: member.created_at,
+});
+
+export async function getOrganizationMembers(
+  organizationId: number
+): Promise<{ success: boolean; count: number; results: OrganizationMember[] }> {
+  if (!Number.isInteger(organizationId) || organizationId <= 0) {
+    throw new Error(
+      "A valid organization ID is required. Add ?organization_id=YOUR_ID to the page URL."
+    );
+  }
+
+  const data = await apiFetch<ApiMember[]>(
+    `/api/rbac/orgs/${organizationId}/members/`
+  );
 
   return {
     success: true,
-    count: mockMembers.length,
-    results: mockMembers.map((member) => ({ ...member })),
+    count: data.length,
+    results: data.map(toOrganizationMember),
   };
 }
 
 export async function updateOrganizationMemberRole(
-  memberId: number,
+  organizationId: number,
+  userId: number,
   payload: UpdateMemberRolePayload
 ): Promise<OrganizationMember> {
-  await delay();
+  const data = await apiFetch<ApiMember>(
+    `/api/rbac/orgs/${organizationId}/members/${userId}/role/`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role: toApiRole(payload.role) }),
+    }
+  );
 
-  const member = mockMembers.find((item) => item.id === memberId);
-
-  if (!member) {
-    throw new Error("Member not found.");
-  }
-
-  member.role = payload.role;
-
-  return { ...member };
+  return toOrganizationMember(data);
 }
