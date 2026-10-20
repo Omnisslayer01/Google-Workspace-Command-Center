@@ -46,6 +46,7 @@ export const TasksPage: React.FC = () => {
     setLoadError(null);
     setActionError(null);
     try {
+      await tasksApi.syncTasks();
       const response = await tasksApi.listTasks();
 
       if (Array.isArray(response?.data)) {
