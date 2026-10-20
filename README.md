@@ -78,6 +78,13 @@ docker compose up --build
 ```
 *(or `docker-compose up --build`)*
 
+In another terminal (after the above is built) run the following command to create the tables when running the postgresSQL in your pc for the first time and wait for a min
+```bash
+docker exec -it Django_container python manage.py migrate
+```
+Note: Once migrated you do not need to run the command again and again 
+
+
 This starts all services:
 - **Frontend (Vite):** `http://localhost:5173`
 - **Django API Backend:** `http://localhost:8001`

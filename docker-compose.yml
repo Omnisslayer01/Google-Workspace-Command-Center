@@ -16,6 +16,10 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - REDIS_URL=redis://redis:6379/0
+    #in environment when you use key=value format to define the pair then everything after the = is taken literally 
+    #meaning if you use pasword="nig" then your password is- "nig" so dont use ""
+    depends_on:
+      - database
 
   node:
     container_name: "frontend"
@@ -51,6 +55,7 @@ services:
     depends_on:
       - django
       - redis
+      - database
     networks:
       - my_network
     env_file:
@@ -77,9 +82,28 @@ services:
       - django
       - celery
       - redis
+      - database
     command: celery -A config beat -l info
+
+  database:
+    container_name: postgres_sql
+    image: postgres:alpine
+    ports:
+     - "5432:5432"
+    networks:
+      - my_network
+    environment:
+      - POSTGRES_DB=gwcc_db
+      - POSTGRES_PASSWORD=new_password
+      - POSTGRES_USER=admin
+    volumes:
+      - gwcc_database:/var/lib/postgresql #this is where the postgres stores it tables
+
   
 
   
 networks:
   my_network: #needs a : so yaml knows its an object not a string i tried understanding but didnt so for now just do it
+
+volumes:
+  gwcc_database:
