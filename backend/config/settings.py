@@ -1,7 +1,6 @@
 import os
 from pathlib import Path
 from datetime import timedelta
-
 import dj_database_url
 from dotenv import load_dotenv
 
@@ -15,8 +14,8 @@ os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 SECRET_KEY = os.getenv(
-    "DJANGO_SECRET_KEY",
-    "django-insecure-dev-only-key"
+    'DJANGO_SECRET_KEY',
+    'django-insecure-dev-only-key'
 )
 
 DEBUG = os.getenv("DEBUG", "True").lower() == "true"
@@ -31,7 +30,7 @@ if not DEBUG:
     SECURE_HSTS_PRELOAD = True
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
-#ALLOWED_HOSTS = []
+
 ALLOWED_HOSTS = [
     host.strip()
     for host in os.getenv(
@@ -107,7 +106,6 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 
 
-import dj_database_url
 
 DATABASES = {
     "default": dj_database_url.config(
