@@ -2,9 +2,17 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.exceptions import APIException
 from .models import Task
 from .serializers import TaskSerializer
 from .services import GoogleTasksService
+
+class GoogleTasksSyncError(APIException):
+    status_code = 502
+    default_detail = (
+        "The task could not be synchronized with Google Tasks."
+        )
+    default_code = "google_tasks_sync_failed"
 
 
 class TaskViewSet(viewsets.ModelViewSet):
@@ -19,10 +27,28 @@ class TaskViewSet(viewsets.ModelViewSet):
         return Task.objects.filter(owner=self.request.user)
 
     def perform_create(self, serializer):
-        # Set the owner automatically and push to Google Tasks if connected
         task = serializer.save(owner=self.request.user)
         google_service = GoogleTasksService(self.request.user)
-        google_service.push_create(task)
+        
+        try:
+            if not google_service.is_connected():
+                raise GoogleTasksSyncError(
+                    "Google Tasks is not connected. Please reconnect your Google account."
+                    )
+                
+            google_task_id = google_service.push_create(task)
+            
+            if not google_task_id:
+                raise GoogleTasksSyncError()
+            
+        except Exception as exc:
+            # Do not keep a local-only task if Google creation fails.
+            task.delete()
+            
+            if isinstance(exc, GoogleTasksSyncError):
+                raise
+            
+            raise GoogleTasksSyncError() from exc
 
     def perform_update(self, serializer):
         task = serializer.save()
