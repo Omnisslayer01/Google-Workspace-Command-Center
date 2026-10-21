@@ -26,26 +26,48 @@ class GoogleTasksService:
         return self.service is not None
 
     def push_create(self, task):
-        """Create a task in Google Tasks and store its external google_task_id."""
+        """Create a task in Google Tasks and save its Google task ID."""
         if not self.service:
-            return None
+            raise RuntimeError(
+                "Google Tasks is not connected. Please reconnect your Google account."
+                )
+        
+        body = {
+            'title': task.title,
+            'notes': task.description or '',
+            'status': (
+                'completed'
+                if task.status == 'completed'
+                else 'needsAction'
+                ),
+            }
+        
+        if task.due_date:
+            body['due'] = task.due_date.strftime('%Y-%m-%dT%H:%M:%S.000Z')
 
         try:
-            body = {
-                'title': task.title,
-                'notes': task.description or '',
-                'status': 'completed' if task.status == 'completed' else 'needsAction',
-            }
-            if task.due_date:
-                body['due'] = task.due_date.strftime('%Y-%m-%dT%H:%M:%S.000Z')
+            response = self.service.tasks().insert(
+                tasklist='@default',
+                body=body,
+                ).execute()
+            google_task_id = response.get('id')
+            
+            if not google_task_id:
+                raise RuntimeError(
+                    "Google Tasks did not return a task ID."
+                    )
 
-            res = self.service.tasks().insert(tasklist='@default', body=body).execute()
-            task.google_task_id = res.get('id')
+            task.google_task_id = google_task_id
             task.save(update_fields=['google_task_id'])
-            return task.google_task_id
-        except Exception as exc:
-            logger.warning("Failed to push task creation to Google Tasks: %s", exc)
-            return None
+
+            return google_task_id
+
+        except Exception:
+            logger.exception(
+                "Failed to create task in Google Tasks for local task %s",
+                task.pk,
+                )
+            raise
 
     def push_update(self, task):
         """Update an existing task in Google Tasks."""
