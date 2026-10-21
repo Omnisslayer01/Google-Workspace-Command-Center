@@ -6,6 +6,12 @@ import { apiFetch } from './apiClient';
  * Connects to BE2 Task 8 /api/tasks/ endpoint.
  */
 export const tasksApi = {
+  async syncGoogleTasks(): Promise<void> {
+    await apiFetch('/api/tasks/sync/', {
+      method: 'POST',
+    });
+  },
+
   async listTasks(): Promise<{ data: WorkspaceTask[]; source: 'live' }> {
     const data = await apiFetch<WorkspaceTask[]>('/api/tasks/');
     return { data, source: 'live' };
@@ -33,7 +39,7 @@ export const tasksApi = {
     // Let's change the API method to take currentStatus, OR we fetch it first.
     const task = await apiFetch<WorkspaceTask>(`/api/tasks/${id}/`);
     const newStatus = task.status === 'completed' ? 'todo' : 'completed';
-    
+
     return await apiFetch<WorkspaceTask>(`/api/tasks/${id}/`, {
       method: 'PATCH',
       body: JSON.stringify({ status: newStatus }),

@@ -9,6 +9,8 @@ import {
   useNavigate,
 } from "react-router-dom";
 
+import { GmailPage } from "./pages/GmailPage";
+import NotificationsPage from "./pages/NotificationsPage";
 import { Dashboard } from "./pages/Dashboard";
 import { CalendarPage } from "./pages/CalendarPage";
 import { TasksPage } from "./pages/TasksPage";
@@ -18,6 +20,7 @@ import { DrivePage } from "./pages/DrivePage";
 import { AutomationsPage } from "./pages/AutomationsPage";
 import { AutomationBuilderPage } from "./pages/AutomationBuilderPage";
 import { AutomationExecutionHistoryPage } from "./pages/AutomationExecutionHistoryPage";
+import { OrganizationAdminPage } from "./pages/OrganizationAdminPage";
 
 
 
@@ -123,6 +126,33 @@ export const App: React.FC = () => {
             </ProtectedRoute>
           }
         />
+
+        <Route
+  path="/organization"
+  element={
+    <ProtectedRoute>
+      <OrganizationAdminPage />
+    </ProtectedRoute>
+  }
+/>
+
+        <Route
+  path="/gmail"
+  element={
+    <ProtectedRoute>
+      <GmailPage />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/notifications"
+  element={
+    <ProtectedRoute>
+      <NotificationsPage />
+    </ProtectedRoute>
+  }
+/>
 
         <Route
           path="/calendar"
