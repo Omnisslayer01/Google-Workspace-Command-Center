@@ -1,5 +1,5 @@
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Q
 from rest_framework import status
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.response import Response
@@ -23,6 +23,7 @@ class TestOrgPermissionView(APIView):
 
 
 class OrgMemberListView(APIView):
+    """GET /<prefix>/orgs/<organization_id>/members/?search=&role="""
     permission_classes = [HasOrgPermission]
     required_roles = ["admin", "manager"]
 
@@ -55,6 +56,7 @@ class OrgMemberListView(APIView):
 
 
 class OrgMemberRoleUpdateView(APIView):
+    """PATCH /<prefix>/orgs/<organization_id>/members/<user_id>/role/  body: {"role": "manager"}"""
     permission_classes = [HasOrgPermission]
     required_roles = ["admin"]
 
@@ -77,6 +79,7 @@ class OrgMemberRoleUpdateView(APIView):
             except Membership.DoesNotExist:
                 raise NotFound("Member not found in this organization.")
 
+            # Do not allow demoting the last organization admin
             if membership.role == Role.ADMIN and new_role != Role.ADMIN:
                 admin_count = Membership.objects.filter(
                     organization_id=organization_id,

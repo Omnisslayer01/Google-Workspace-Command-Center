@@ -1,3 +1,4 @@
+
 import os
 from pathlib import Path
 from datetime import timedelta
@@ -9,13 +10,14 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 load_dotenv(BASE_DIR.parent / ".env", override=True)
-import os
-os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 
-# SECURITY WARNING: don't run with debug turned on in production!
+os.environ["OAUTHLIB_RELAX_TOKEN_SCOPE"] = "1"
+
+
+# Security settings
 SECRET_KEY = os.getenv(
-    'DJANGO_SECRET_KEY',
-    'django-insecure-dev-only-key'
+    "DJANGO_SECRET_KEY",
+    "django-insecure-dev-only-key",
 )
 
 DEBUG = os.getenv("DEBUG", "True").lower() == "true"
@@ -35,78 +37,79 @@ ALLOWED_HOSTS = [
     host.strip()
     for host in os.getenv(
         "ALLOWED_HOSTS",
-        "localhost,127.0.0.1,google-workspace-command-center-1.onrender.com"
+        "localhost,127.0.0.1,google-workspace-command-center-1.onrender.com",
     ).split(",")
     if host.strip()
 ]
 
 FRONTEND_URL = os.getenv(
     "FRONTEND_URL",
-    "http://localhost:5173"
+    "http://localhost:5173",
 )
 
 
+# Installed applications
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'rest_framework',
-    'rest_framework_simplejwt',
-    'rest_framework_simplejwt.token_blacklist',
-    'common',
-    'accounts',
-    'google_auth',
-    'rbac',
-    'audit',
-    'gmail_integration',
-    'calendar_integration',
-    'notifications',
-    'corsheaders',
-    'sheets',
-    'automation',
-    'drive',
-    'tasks',
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "rest_framework",
+    "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
+    "common",
+    "accounts",
+    "google_auth",
+    "rbac",
+    "audit",
+    "gmail_integration",
+    "calendar_integration",
+    "notifications",
+    "corsheaders",
+    "sheets",
+    "automation",
+    "drive",
+    "tasks",
 ]
 
 
-
+# Middleware
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = 'config.urls'
+
+ROOT_URLCONF = "config.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'config.wsgi.application'
+WSGI_APPLICATION = "config.wsgi.application"
 
 
-
-
+# Database
 DATABASES = {
     "default": dj_database_url.config(
         default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
@@ -116,42 +119,68 @@ DATABASES = {
 }
 
 
+# Password validation
 AUTH_PASSWORD_VALIDATORS = [
-    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+    {
+        "NAME": (
+            "django.contrib.auth.password_validation."
+            "UserAttributeSimilarityValidator"
+        )
+    },
+    {
+        "NAME": (
+            "django.contrib.auth.password_validation."
+            "MinimumLengthValidator"
+        )
+    },
+    {
+        "NAME": (
+            "django.contrib.auth.password_validation."
+            "CommonPasswordValidator"
+        )
+    },
+    {
+        "NAME": (
+            "django.contrib.auth.password_validation."
+            "NumericPasswordValidator"
+        )
+    },
 ]
 
 
-LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'Asia/Kolkata'
-
+# Internationalization
+LANGUAGE_CODE = "en-us"
+TIME_ZONE = "Asia/Kolkata"
 USE_I18N = True
-
 USE_TZ = True
 
 
-
+# Email settings
 MAILERS = {
-    'default': {
-        'BACKEND': os.getenv(
-            'EMAIL_BACKEND',
-            'django.core.mail.backends.console.EmailBackend',
+    "default": {
+        "BACKEND": os.getenv(
+            "EMAIL_BACKEND",
+            "django.core.mail.backends.console.EmailBackend",
         ),
-        'HOST': os.getenv('EMAIL_HOST', 'smtp.gmail.com'),
-        'PORT': int(os.getenv('EMAIL_PORT', 587)),
-        'USE_TLS': os.getenv('EMAIL_USE_TLS', 'True') == 'True',
-        'USERNAME': os.getenv('EMAIL_HOST_USER', ''),
-        'PASSWORD': os.getenv('EMAIL_HOST_PASSWORD', ''),
-        'FROM_EMAIL': os.getenv('DEFAULT_FROM_EMAIL', 'noreply@gwcc.local'),
+        "HOST": os.getenv("EMAIL_HOST", "smtp.gmail.com"),
+        "PORT": int(os.getenv("EMAIL_PORT", 587)),
+        "USE_TLS": os.getenv("EMAIL_USE_TLS", "True") == "True",
+        "USERNAME": os.getenv("EMAIL_HOST_USER", ""),
+        "PASSWORD": os.getenv("EMAIL_HOST_PASSWORD", ""),
+        "FROM_EMAIL": os.getenv(
+            "DEFAULT_FROM_EMAIL",
+            "noreply@gwcc.local",
+        ),
     },
 }
 
-# Convenience alias used by Django's send_mail() helper and Celery tasks.
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@gwcc.local')
+DEFAULT_FROM_EMAIL = os.getenv(
+    "DEFAULT_FROM_EMAIL",
+    "noreply@gwcc.local",
+)
 
+
+# Static files
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
@@ -160,22 +189,23 @@ STORAGES = {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "BACKEND": (
+            "whitenoise.storage.CompressedManifestStaticFilesStorage"
+        ),
     },
 }
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
-# ---------------- Custom settings (BE1 additions) ----------------
-
+# Django REST Framework
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
-    'DEFAULT_PAGINATION_CLASS': 'common.pagination.StandardResultsPagination',
-    'PAGE_SIZE': 20,
-    'EXCEPTION_HANDLER': 'common.exceptions.custom_exception_handler',
+    "DEFAULT_PAGINATION_CLASS": "common.pagination.StandardResultsPagination",
+    "PAGE_SIZE": 20,
+    "EXCEPTION_HANDLER": "common.exceptions.custom_exception_handler",
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.UserRateThrottle",
         "rest_framework.throttling.AnonRateThrottle",
@@ -189,89 +219,99 @@ REST_FRAMEWORK = {
     },
 }
 
+
+# JWT settings
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
-    'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': True,
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
 }
 
-FERNET_KEY = os.getenv('FERNET_KEY', '')
-GOOGLE_TOKEN_ENCRYPTION_KEY = os.getenv('GOOGLE_TOKEN_ENCRYPTION_KEY', '') or FERNET_KEY
 
-GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '')
-GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET', '')
-GOOGLE_REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI', '')
+# Google OAuth and token encryption
+FERNET_KEY = os.getenv("FERNET_KEY", "")
+GOOGLE_TOKEN_ENCRYPTION_KEY = (
+    os.getenv("GOOGLE_TOKEN_ENCRYPTION_KEY", "") or FERNET_KEY
+)
+
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
+GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "")
 
 
-# ---------------- Celery ----------------
-
-CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
+# Celery
+CELERY_BROKER_URL = os.getenv(
+    "CELERY_BROKER_URL",
+    "redis://localhost:6379/0",
+)
+CELERY_RESULT_BACKEND = os.getenv(
+    "CELERY_RESULT_BACKEND",
+    "redis://localhost:6379/0",
+)
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 
 CELERY_BEAT_SCHEDULE = {
-    'check-scheduled-triggers': {
-        'task': 'automation.tasks.check_scheduled_triggers',
-        'schedule': 60.0,
+    "check-scheduled-triggers": {
+        "task": "automation.tasks.check_scheduled_triggers",
+        "schedule": 60.0,
     },
-    'sync-google-data': {
-        'task': 'google_auth.tasks.sync_all_google_data',
-        'schedule': 3600.0,
+    "sync-google-data": {
+        "task": "google_auth.tasks.sync_all_google_data",
+        "schedule": 3600.0,
     },
-    'poll-gmail-triggers': {
-        'task': 'automation.tasks.poll_gmail_triggers',
-        'schedule': 60.0,
+    "poll-gmail-triggers": {
+        "task": "automation.tasks.poll_gmail_triggers",
+        "schedule": 60.0,
     },
-    'poll-calendar-triggers': {
-        'task': 'automation.tasks.poll_calendar_triggers',
-        'schedule': 60.0,
+    "poll-calendar-triggers": {
+        "task": "automation.tasks.poll_calendar_triggers",
+        "schedule": 60.0,
     },
-    'poll-drive-triggers': {
-        'task': 'automation.tasks.poll_drive_triggers',
-        'schedule': 60.0,
+    "poll-drive-triggers": {
+        "task": "automation.tasks.poll_drive_triggers",
+        "schedule": 60.0,
     },
-    'cleanup-expired-records': {
-        'task': 'automation.tasks.cleanup_expired_records',
-        'schedule': 86400.0, # Every 24 hours
+    "cleanup-expired-records": {
+        "task": "automation.tasks.cleanup_expired_records",
+        "schedule": 86400.0,
     },
 }
 
 
-# ---------------- Logging (token leak protection) ----------------
-
+# Logging and token leak protection
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'filters': {
-        'sensitive_data': {
-            '()': 'common.logging_filters.SensitiveDataFilter',
+    "version": 1,
+    "disable_existing_loggers": False,
+    "filters": {
+        "sensitive_data": {
+            "()": "common.logging_filters.SensitiveDataFilter",
         },
     },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'filters': ['sensitive_data'],
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "filters": ["sensitive_data"],
         },
     },
-    'root': {
-        'handlers': ['console'],
-        'level': 'INFO',
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
     },
 }
 
 
-
-
+# CORS settings
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.getenv(
         "CORS_ALLOWED_ORIGINS",
+        "http://localhost:3000,"
         "http://localhost:5173,"
-        "http://127.0.0.1:5173," 
+        "http://127.0.0.1:5173,"
         "https://google-workspace-command-center-frontend.onrender.com",
     ).split(",")
     if origin.strip()
@@ -279,11 +319,13 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOW_CREDENTIALS = True
 
+
+# CSRF trusted origins
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
     for origin in os.getenv(
         "CSRF_TRUSTED_ORIGINS",
-        ""
+        "",
     ).split(",")
     if origin.strip()
 ]
