@@ -1,7 +1,5 @@
-from django.shortcuts import get_object_or_404
-from rest_framework import status
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Q
 from rest_framework import status
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.response import Response
@@ -27,22 +25,12 @@ class TestOrgPermissionView(APIView):
 class OrgMemberListView(APIView):
     """GET /<prefix>/orgs/<organization_id>/members/?search=&role="""
     permission_classes = [HasOrgPermission]
-    required_roles = ['admin', 'manager']
+    required_roles = ["admin", "manager"]
 
     def get(self, request, organization_id):
         members = (
             Membership.objects
             .filter(organization_id=organization_id)
-            .select_related('user')
-            .order_by('created_at')
-        )
-
-        search = request.query_params.get('search')
-        role = request.query_params.get('role')
-
-        if search:
-            members = members.filter(user__email__icontains=search)
-        if role:
             .select_related("user")
             .order_by("created_at")
         )
@@ -70,32 +58,6 @@ class OrgMemberListView(APIView):
 class OrgMemberRoleUpdateView(APIView):
     """PATCH /<prefix>/orgs/<organization_id>/members/<user_id>/role/  body: {"role": "manager"}"""
     permission_classes = [HasOrgPermission]
-    required_roles = ['admin']
-
-    def patch(self, request, organization_id, user_id):
-        member = get_object_or_404(
-            Membership, organization_id=organization_id, user_id=user_id
-        )
-
-        serializer = RoleUpdateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        new_role = serializer.validated_data['role']
-
-        # Shevtcha admin demote hou deu naka
-        if member.role == 'admin' and new_role != 'admin':
-            admin_count = Membership.objects.filter(
-                organization_id=organization_id, role='admin'
-            ).count()
-            if admin_count <= 1:
-                return Response(
-                    {'success': False, 'message': 'Organization needs at least one admin.'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-        member.role = new_role
-        member.save()
-        return Response(MemberSerializer(member).data)
-    permission_classes = [HasOrgPermission]
     required_roles = ["admin"]
 
     def patch(self, request, organization_id, user_id):
@@ -117,6 +79,7 @@ class OrgMemberRoleUpdateView(APIView):
             except Membership.DoesNotExist:
                 raise NotFound("Member not found in this organization.")
 
+            # Do not allow demoting the last organization admin
             if membership.role == Role.ADMIN and new_role != Role.ADMIN:
                 admin_count = Membership.objects.filter(
                     organization_id=organization_id,
