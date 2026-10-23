@@ -14,9 +14,7 @@ class DriveService:
 
     def __init__(self, user):
         self.user = user
-
         credentials = get_google_client(user)
-
         self.drive = build(
             "drive",
             "v3",
@@ -26,17 +24,25 @@ class DriveService:
     def list_files(self, folder_id=None, query=None, page_size=100):
         filters = ["trashed = false"]
 
-        if folder_id:
-            filters.append(f"'{folder_id}' in parents")
+        # Show only items directly inside My Drive or the selected folder.
+        if not folder_id or folder_id == "root":
+            filters.append("'root' in parents")
+        else:
+            safe_folder_id = (
+                folder_id.replace("\\", "\\\\").replace("'", "\\'")
+            )
+            filters.append(f"'{safe_folder_id}' in parents")
 
         if query:
-            filters.append(f"name contains '{query}'")
+            safe_query = query.replace("\\", "\\\\").replace("'", "\\'")
+            filters.append(f"name contains '{safe_query}'")
 
-        response = (
+        return (
             self.drive.files()
             .list(
                 q=" and ".join(filters),
                 pageSize=page_size,
+                orderBy="folder,name",
                 fields=(
                     "nextPageToken,"
                     "files(id,name,mimeType,size,"
@@ -47,19 +53,13 @@ class DriveService:
             .execute()
         )
 
-        return response
-
     def upload(self, file, folder_id=None):
         file_name = getattr(file, "name", "uploaded_file")
         content_type = getattr(file, "content_type", None)
-
         file_object = getattr(file, "file", file)
 
-        metadata = {
-            "name": file_name,
-        }
-
-        if folder_id:
+        metadata = {"name": file_name}
+        if folder_id and folder_id != "root":
             metadata["parents"] = [folder_id]
 
         media = MediaIoBaseUpload(
@@ -75,29 +75,33 @@ class DriveService:
                 media_body=media,
                 fields=(
                     "id,name,mimeType,size,"
-                    "createdTime,modifiedTime,"
-                    "parents,webViewLink"
+                    "createdTime,modifiedTime,parents,webViewLink"
                 ),
             )
             .execute()
         )
-    
+
+
     def download(self, file_id):
+        return self.drive.files().get_media(fileId=file_id)
+
+    def get_file_metadata(self, file_id):
         return (
             self.drive.files()
             .get(
                 fileId=file_id,
-                alt="media",
+                fields="id,name,mimeType,size,webViewLink",
             )
+            .execute()
         )
-    
+
+
     def create_folder(self, name, parent_id=None):
         metadata = {
             "name": name,
             "mimeType": "application/vnd.google-apps.folder",
         }
-
-        if parent_id:
+        if parent_id and parent_id != "root":
             metadata["parents"] = [parent_id]
 
         return (
@@ -108,7 +112,7 @@ class DriveService:
             )
             .execute()
         )
-    
+
     def rename(self, file_id, name):
         return (
             self.drive.files()
@@ -119,29 +123,18 @@ class DriveService:
             )
             .execute()
         )
-    
+
     def move(self, file_id, new_parent_id, old_parent_id=None):
         kwargs = {
             "fileId": file_id,
             "addParents": new_parent_id,
             "fields": "id,name,mimeType,parents,modifiedTime",
         }
-
         if old_parent_id:
             kwargs["removeParents"] = old_parent_id
 
-        return (
-            self.drive.files()
-            .update(**kwargs)
-            .execute()
-        )
-    
-    def delete(self, file_id):
-        self.drive.files().delete(
-            fileId=file_id
-        ).execute()
+        return self.drive.files().update(**kwargs).execute()
 
-        return {
-            "success": True,
-            "file_id": file_id,
-        }
+    def delete(self, file_id):
+        self.drive.files().delete(fileId=file_id).execute()
+        return {"success": True, "file_id": file_id}

@@ -137,26 +137,65 @@ class DriveFileUploadView(APIView):
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
 class DriveFileDownloadView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request, file_id):
+        from django.http import StreamingHttpResponse
+        from googleapiclient.http import MediaIoBaseDownload
+        from io import BytesIO
+        from urllib.parse import quote
+
         try:
             service = DriveService(request.user)
+            metadata = service.get_file_metadata(file_id)
 
-            drive_request = service.download(file_id)
+            mime_type = metadata.get(
+                "mimeType", "application/octet-stream"
+            )
+            file_name = metadata.get("name", "download")
 
-            from django.http import StreamingHttpResponse
+            # Google-native files must be exported, not downloaded with alt=media.
+            export_types = {
+                "application/vnd.google-apps.document":
+                    ("application/pdf", ".pdf"),
+                "application/vnd.google-apps.spreadsheet":
+                    ("application/pdf", ".pdf"),
+                "application/vnd.google-apps.presentation":
+                    ("application/pdf", ".pdf"),
+            }
+
+            if mime_type in export_types:
+                export_mime, extension = export_types[mime_type]
+                drive_request = service.drive.files().export(
+                    fileId=file_id,
+                    mimeType=export_mime,
+                )
+                if not file_name.lower().endswith(extension):
+                    file_name += extension
+                content_type = export_mime
+            else:
+                drive_request = service.download(file_id)
+                content_type = mime_type
+
+            buffer = BytesIO()
+            downloader = MediaIoBaseDownload(buffer, drive_request)
+            done = False
+
+            while not done:
+                _, done = downloader.next_chunk()
+
+            buffer.seek(0)
 
             response = StreamingHttpResponse(
-                self._stream_file(drive_request),
-                content_type="application/octet-stream",
+                iter(lambda: buffer.read(8192), b""),
+                content_type=content_type,
             )
-
             response["Content-Disposition"] = (
-                f'attachment; filename="{file_id}"'
+                f"attachment; filename*=UTF-8''{quote(file_name)}"
             )
-
+            response["X-Content-Type-Options"] = "nosniff"
             return response
 
         except Exception as exc:
@@ -167,25 +206,6 @@ class DriveFileDownloadView(APIView):
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-
-    @staticmethod
-    def _stream_file(drive_request):
-        from io import BytesIO
-        from googleapiclient.http import MediaIoBaseDownload
-
-        buffer = BytesIO()
-        downloader = MediaIoBaseDownload(buffer, drive_request)
-
-        done = False
-
-        while not done:
-            _, done = downloader.next_chunk()
-
-        buffer.seek(0)
-
-        while chunk := buffer.read(8192):
-            yield chunk
-
 
 class DriveFileRenameView(APIView):
     permission_classes = (IsAuthenticated,)

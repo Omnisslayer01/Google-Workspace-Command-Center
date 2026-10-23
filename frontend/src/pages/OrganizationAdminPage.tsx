@@ -1,400 +1,806 @@
 
-import React, { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Users,
-  ShieldCheck,
-  Clock,
-  Search,
-  RefreshCw,
-  UserRoundCog,
   AlertCircle,
+  Building2,
+  Check,
+  ChevronDown,
+  LoaderCircle,
+  Plus,
+  RefreshCw,
+  Search,
+  ShieldCheck,
+  UserPlus,
+  Users,
 } from "lucide-react";
 
-import { Header } from "../components/common/Header";
 import {
+  addOrganizationMember,
+  createOrganization,
   getOrganizationMembers,
+  getOrganizations,
   updateOrganizationMemberRole,
+  type Organization,
   type OrganizationMember,
   type OrganizationRole,
 } from "../lib/organizationApi";
 
-const roleStyles: Record<OrganizationRole, string> = {
-  Admin: "bg-violet-50 text-violet-700 border-violet-200",
-  Member: "bg-blue-50 text-blue-700 border-blue-200",
-  Viewer: "bg-slate-100 text-slate-700 border-slate-200",
+const roleLabels: Record<OrganizationRole, string> = {
+  admin: "Admin",
+  manager: "Manager",
+  member: "Member",
 };
 
-export const OrganizationAdminPage: React.FC = () => {
-  const [members, setMembers] = useState<OrganizationMember[]>([]);
-  const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState("All");
-  const [loading, setLoading] = useState(true);
-  const [updatingId, setUpdatingId] = useState<number | null>(null);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return "Something went wrong. Please try again.";
+}
 
-  const loadMembers = async () => {
-    setLoading(true);
+function formatDate(value: string): string {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return date.toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function getInitials(username: string, email: string): string {
+  const value = username?.trim() || email?.trim() || "U";
+
+  return value
+    .split(/[\s._@-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0].toUpperCase())
+    .join("");
+}
+
+export default function OrganizationAdminPage() {
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [selectedOrganizationId, setSelectedOrganizationId] = useState<
+    number | null
+  >(null);
+  const [members, setMembers] = useState<OrganizationMember[]>([]);
+
+  const [loadingOrganizations, setLoadingOrganizations] = useState(true);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [creatingOrganization, setCreatingOrganization] = useState(false);
+  const [addingMember, setAddingMember] = useState(false);
+  const [updatingMemberId, setUpdatingMemberId] = useState<number | null>(
+    null
+  );
+
+  const [organizationName, setOrganizationName] = useState("");
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [memberEmail, setMemberEmail] = useState("");
+  const [memberRole, setMemberRole] = useState<OrganizationRole>("member");
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState<"all" | OrganizationRole>(
+    "all"
+  );
+
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const selectedOrganization = useMemo(
+    () =>
+      organizations.find(
+        (organization) => organization.id === selectedOrganizationId
+      ) ?? null,
+    [organizations, selectedOrganizationId]
+  );
+
+  const isAdmin = selectedOrganization?.role === "admin";
+
+  const loadOrganizations = useCallback(async (preferredId?: number) => {
+    setLoadingOrganizations(true);
     setError("");
 
     try {
-      const response = await getOrganizationMembers();
-      setMembers(response.results);
-    } catch {
-      setError("Unable to load organization members.");
+      const response = await getOrganizations();
+      const list = response.results ?? [];
+
+      setOrganizations(list);
+
+      setSelectedOrganizationId((currentId) => {
+        if (
+          preferredId !== undefined &&
+          list.some((organization) => organization.id === preferredId)
+        ) {
+          return preferredId;
+        }
+
+        if (
+          currentId !== null &&
+          list.some((organization) => organization.id === currentId)
+        ) {
+          return currentId;
+        }
+
+        return list[0]?.id ?? null;
+      });
+    } catch (err) {
+      setError(getErrorMessage(err));
     } finally {
-      setLoading(false);
+      setLoadingOrganizations(false);
+    }
+  }, []);
+
+  const loadMembers = useCallback(async (organizationId: number) => {
+    setLoadingMembers(true);
+    setError("");
+
+    try {
+      const response = await getOrganizationMembers(organizationId);
+      setMembers(response.results ?? []);
+    } catch (err) {
+      setMembers([]);
+      setError(getErrorMessage(err));
+    } finally {
+      setLoadingMembers(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadOrganizations();
+  }, [loadOrganizations]);
+
+  useEffect(() => {
+    if (selectedOrganizationId === null) {
+      setMembers([]);
+      return;
+    }
+
+    void loadMembers(selectedOrganizationId);
+  }, [selectedOrganizationId, loadMembers]);
+
+  const handleCreateOrganization = async (
+    event: React.FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault();
+
+    const name = organizationName.trim();
+
+    if (!name) {
+      setError("Please enter an organization name.");
+      return;
+    }
+
+    setCreatingOrganization(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await createOrganization(name);
+
+      setOrganizationName("");
+      setShowCreateForm(false);
+
+      await loadOrganizations(response.organization.id);
+
+      setSuccess(`"${response.organization.name}" was created successfully.`);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setCreatingOrganization(false);
     }
   };
 
-  useEffect(() => {
-    void loadMembers();
-  }, []);
+  const handleAddMember = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (selectedOrganizationId === null) {
+      setError("Create or select an organization first.");
+      return;
+    }
+
+    if (!memberEmail.trim()) {
+      setError("Enter the email address of a registered user.");
+      return;
+    }
+
+    setAddingMember(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await addOrganizationMember(selectedOrganizationId, {
+        email: memberEmail.trim(),
+        role: memberRole,
+      });
+
+      setMembers((current) => {
+        if (current.some((member) => member.id === response.member.id)) {
+          return current;
+        }
+
+        return [...current, response.member];
+      });
+
+      setMemberEmail("");
+      setMemberRole("member");
+      setSuccess("Member added successfully.");
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setAddingMember(false);
+    }
+  };
+
+  const handleRoleChange = async (
+    member: OrganizationMember,
+    newRole: OrganizationRole
+  ) => {
+    if (selectedOrganizationId === null || member.role === newRole) return;
+
+    setUpdatingMemberId(member.id);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await updateOrganizationMemberRole(
+        selectedOrganizationId,
+        member.id,
+        { role: newRole }
+      );
+
+      setMembers((current) =>
+        current.map((item) =>
+          item.id === member.id ? response.member : item
+        )
+      );
+
+      setSuccess(`Updated ${member.username || member.email}'s role.`);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setUpdatingMemberId(null);
+    }
+  };
 
   const filteredMembers = useMemo(() => {
-    const query = search.trim().toLowerCase();
+    const normalizedSearch = search.trim().toLowerCase();
 
     return members.filter((member) => {
       const matchesSearch =
-        member.name.toLowerCase().includes(query) ||
-        member.email.toLowerCase().includes(query);
+        !normalizedSearch ||
+        member.username.toLowerCase().includes(normalizedSearch) ||
+        member.email.toLowerCase().includes(normalizedSearch);
 
-      const matchesRole =
-        roleFilter === "All" || member.role === roleFilter;
+      const matchesRole = roleFilter === "all" || member.role === roleFilter;
 
       return matchesSearch && matchesRole;
     });
   }, [members, search, roleFilter]);
 
-  const activeCount = members.filter(
-    (member) => member.status === "Active"
+  const adminCount = members.filter((member) => member.role === "admin").length;
+  const managerCount = members.filter(
+    (member) => member.role === "manager"
   ).length;
-
-  const adminCount = members.filter(
-    (member) => member.role === "Admin"
-  ).length;
-
-  const pendingCount = members.filter(
-    (member) => member.status === "Pending"
-  ).length;
-
-  const handleRoleChange = async (
-    memberId: number,
-    role: OrganizationRole
-  ) => {
-    const currentMember = members.find(
-      (member) => member.id === memberId
-    );
-
-    if (!currentMember || currentMember.role === role) return;
-
-    setUpdatingId(memberId);
-    setError("");
-    setNotice("");
-
-    try {
-      const updatedMember = await updateOrganizationMemberRole(
-        memberId,
-        { role }
-      );
-
-      setMembers((current) =>
-        current.map((member) =>
-          member.id === memberId ? updatedMember : member
-        )
-      );
-
-      setNotice(`Role updated to ${role} for ${updatedMember.name}.`);
-    } catch {
-      setError("Unable to update this member's role.");
-    } finally {
-      setUpdatingId(null);
-    }
-  };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <Header />
-
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="mb-2 flex items-center gap-2 text-sm text-slate-500">
-              <Users size={16} />
-              <span>Workspace</span>
-              <span>/</span>
-              <span className="text-slate-700">
-                Team Administration
-              </span>
+              <Building2 size={16} />
+              Workspace administration
             </div>
 
-            <h1 className="text-3xl font-bold tracking-tight">
-              Team Administration
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              Organization &amp; Members
             </h1>
 
-            <p className="mt-2 max-w-2xl text-sm text-slate-500">
-              Manage organization members and control their access
-              with role assignments.
+            <p className="mt-2 max-w-2xl text-sm text-slate-600">
+              Create workspaces, manage members, and control their
+              organization roles.
             </p>
           </div>
 
           <button
             type="button"
-            onClick={() => void loadMembers()}
-            disabled={loading}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium shadow-sm transition hover:bg-slate-100 disabled:opacity-50"
+            onClick={() => {
+              void loadOrganizations(selectedOrganizationId ?? undefined);
+              if (selectedOrganizationId !== null) {
+                void loadMembers(selectedOrganizationId);
+              }
+            }}
+            disabled={loadingOrganizations || loadingMembers}
+            className="inline-flex items-center justify-center gap-2 self-start rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium shadow-sm transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 sm:self-auto"
           >
-            <RefreshCw
-              size={16}
-              className={loading ? "animate-spin" : ""}
-            />
-            Refresh members
+            {loadingOrganizations || loadingMembers ? (
+              <LoaderCircle size={16} className="animate-spin" />
+            ) : (
+              <RefreshCw size={16} />
+            )}
+            Refresh
           </button>
-        </div>
+        </header>
 
-        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <SummaryCard
-            title="Total members"
-            value={members.length}
-            icon={<Users size={20} />}
-            description="Listed in this workspace"
-          />
-          <SummaryCard
-            title="Active members"
-            value={activeCount}
-            icon={<ShieldCheck size={20} />}
-            description="Currently active"
-          />
-          <SummaryCard
-            title="Administrators"
-            value={adminCount}
-            icon={<UserRoundCog size={20} />}
-            description="Members with admin roles"
-          />
-          <SummaryCard
-            title="Pending invitations"
-            value={pendingCount}
-            icon={<Clock size={20} />}
-            description="Awaiting activation"
-          />
-        </div>
+        {error && (
+          <div
+            role="alert"
+            className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+          >
+            <AlertCircle size={19} className="mt-0.5 shrink-0" />
+            <p className="min-w-0 flex-1 break-words">{error}</p>
+            <button
+              type="button"
+              onClick={() => setError("")}
+              aria-label="Dismiss error"
+              className="font-semibold"
+            >
+              ×
+            </button>
+          </div>
+        )}
 
-        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-200 p-5 sm:p-6">
-            <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
-              <div>
-                <h2 className="text-lg font-semibold">Organization members</h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  Search members and manage their assigned roles.
+        {success && (
+          <div
+            role="status"
+            className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800"
+          >
+            <Check size={18} className="mt-0.5 shrink-0" />
+            <p className="min-w-0 flex-1">{success}</p>
+            <button
+              type="button"
+              onClick={() => setSuccess("")}
+              aria-label="Dismiss success message"
+              className="font-semibold"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="flex items-center gap-2 text-lg font-semibold">
+                <Building2 size={20} className="text-indigo-600" />
+                Your workspaces
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Select a workspace to manage its members.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowCreateForm((current) => !current);
+                setError("");
+                setSuccess("");
+              }}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
+            >
+              <Plus size={17} />
+              Create workspace
+            </button>
+          </div>
+
+          {showCreateForm && (
+            <form
+              onSubmit={handleCreateOrganization}
+              className="mt-5 flex flex-col gap-3 rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 sm:flex-row sm:items-end"
+            >
+              <div className="flex-1">
+                <label
+                  htmlFor="organization-name"
+                  className="mb-1.5 block text-sm font-medium text-slate-700"
+                >
+                  Workspace name
+                </label>
+                <input
+                  id="organization-name"
+                  value={organizationName}
+                  onChange={(event) => setOrganizationName(event.target.value)}
+                  placeholder="e.g. Engineering Team"
+                  maxLength={255}
+                  required
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={creatingOrganization}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {creatingOrganization && (
+                  <LoaderCircle size={16} className="animate-spin" />
+                )}
+                Create
+              </button>
+            </form>
+          )}
+
+          {loadingOrganizations ? (
+            <div className="flex items-center gap-2 py-8 text-sm text-slate-500">
+              <LoaderCircle size={18} className="animate-spin" />
+              Loading workspaces...
+            </div>
+          ) : organizations.length === 0 ? (
+            <div className="mt-5 rounded-xl border border-dashed border-slate-300 px-5 py-10 text-center">
+              <Building2 size={32} className="mx-auto text-slate-400" />
+              <h3 className="mt-3 font-semibold">No workspaces yet</h3>
+              <p className="mt-1 text-sm text-slate-500">
+                Create your first workspace to start managing members.
+              </p>
+            </div>
+          ) : (
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {organizations.map((organization) => {
+                const selected = organization.id === selectedOrganizationId;
+
+                return (
+                  <button
+                    key={organization.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedOrganizationId(organization.id);
+                      setSuccess("");
+                      setError("");
+                    }}
+                    className={`flex min-w-0 items-start gap-3 rounded-xl border p-4 text-left transition ${
+                      selected
+                        ? "border-indigo-400 bg-indigo-50 ring-1 ring-indigo-200"
+                        : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <div
+                      className={`rounded-lg p-2 ${
+                        selected
+                          ? "bg-indigo-100 text-indigo-700"
+                          : "bg-slate-100 text-slate-600"
+                      }`}
+                    >
+                      <Building2 size={20} />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <p className="break-words font-semibold">
+                        {organization.name}
+                      </p>
+                      <p className="mt-1 text-xs capitalize text-slate-500">
+                        Your role: {roleLabels[organization.role]}
+                      </p>
+                    </div>
+
+                    {selected && (
+                      <Check
+                        size={18}
+                        className="shrink-0 text-indigo-600"
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {selectedOrganization && (
+          <>
+            <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-500">
+                    Total members
+                  </span>
+                  <Users size={20} className="text-indigo-600" />
+                </div>
+                <p className="mt-3 text-3xl font-bold tabular-nums">
+                  {members.length}
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  In {selectedOrganization.name}
                 </p>
               </div>
 
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <div className="relative">
-                  <Search
-                    size={17}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                  />
-                  <input
-                    value={search}
-                    onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Search name or email"
-                    aria-label="Search members"
-                    className="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:w-64"
-                  />
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-500">
+                    Administrators
+                  </span>
+                  <ShieldCheck size={20} className="text-emerald-600" />
+                </div>
+                <p className="mt-3 text-3xl font-bold tabular-nums">
+                  {adminCount}
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Members with admin access
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-500">
+                    Managers
+                  </span>
+                  <Users size={20} className="text-amber-600" />
+                </div>
+                <p className="mt-3 text-3xl font-bold tabular-nums">
+                  {managerCount}
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Members with manager roles
+                </p>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="flex flex-col gap-4 border-b border-slate-200 p-5 sm:p-6">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold">
+                      Manage members
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Workspace: {selectedOrganization.name}
+                    </p>
+                  </div>
+
+                  <span
+                    className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-semibold ${
+                      isAdmin
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    Your role: {roleLabels[selectedOrganization.role]}
+                  </span>
                 </div>
 
-                <select
-                  value={roleFilter}
-                  onChange={(event) => setRoleFilter(event.target.value)}
-                  aria-label="Filter by role"
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-500"
-                >
-                  <option value="All">All roles</option>
-                  <option value="Admin">Admin</option>
-                  <option value="Member">Member</option>
-                  <option value="Viewer">Viewer</option>
-                </select>
-              </div>
-            </div>
-          </div>
+                {isAdmin ? (
+                  <form
+                    onSubmit={handleAddMember}
+                    className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-[minmax(0,1fr)_180px_auto]"
+                  >
+                    <div>
+                      <label
+                        htmlFor="member-email"
+                        className="mb-1.5 block text-sm font-medium text-slate-700"
+                      >
+                        Registered user's email
+                      </label>
+                      <input
+                        id="member-email"
+                        type="email"
+                        value={memberEmail}
+                        onChange={(event) => setMemberEmail(event.target.value)}
+                        placeholder="colleague@example.com"
+                        required
+                        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                      />
+                    </div>
 
-          {error && (
-            <div
-              role="alert"
-              className="m-5 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"
-            >
-              <AlertCircle size={18} className="mt-0.5 shrink-0" />
-              {error}
-            </div>
-          )}
-
-          {notice && (
-            <div
-              role="status"
-              className="mx-5 mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700"
-            >
-              {notice} This change is currently mock-only.
-            </div>
-          )}
-
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th className="px-6 py-4 font-semibold">Member</th>
-                  <th className="px-6 py-4 font-semibold">Status</th>
-                  <th className="px-6 py-4 font-semibold">Role</th>
-                  <th className="px-6 py-4 font-semibold">Joined</th>
-                </tr>
-              </thead>
-
-              <tbody className="divide-y divide-slate-100">
-                {loading ? (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="px-6 py-12 text-center text-slate-500"
-                    >
-                      Loading members...
-                    </td>
-                  </tr>
-                ) : filteredMembers.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="px-6 py-12 text-center text-slate-500"
-                    >
-                      No members match your search.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredMembers.map((member) => (
-                    <tr
-                      key={member.id}
-                      className="transition hover:bg-slate-50/70"
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 font-semibold text-blue-700">
-                            {member.name
-                              .split(" ")
-                              .map((part) => part[0])
-                              .join("")
-                              .slice(0, 2)
-                              .toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="font-medium text-slate-900">
-                              {member.name}
-                            </p>
-                            <p className="mt-1 text-slate-500">
-                              {member.email}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <span
-                          className={`inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-medium ${
-                            member.status === "Active"
-                              ? "bg-emerald-50 text-emerald-700"
-                              : "bg-amber-50 text-amber-700"
-                          }`}
-                        >
-                          <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                          {member.status}
-                        </span>
-                      </td>
-
-                      <td className="px-6 py-4">
+                    <div>
+                      <label
+                        htmlFor="member-role"
+                        className="mb-1.5 block text-sm font-medium text-slate-700"
+                      >
+                        Initial role
+                      </label>
+                      <div className="relative">
                         <select
-                          value={member.role}
-                          disabled={updatingId === member.id}
+                          id="member-role"
+                          value={memberRole}
                           onChange={(event) =>
-                            void handleRoleChange(
-                              member.id,
+                            setMemberRole(
                               event.target.value as OrganizationRole
                             )
                           }
-                          aria-label={`Role for ${member.name}`}
-                          className={`rounded-lg border px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-100 disabled:cursor-wait disabled:opacity-60 ${roleStyles[member.role]}`}
+                          className="w-full appearance-none rounded-lg border border-slate-300 bg-white px-3 py-2.5 pr-9 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                         >
-                          <option value="Admin">Admin</option>
-                          <option value="Member">Member</option>
-                          <option value="Viewer">Viewer</option>
+                          <option value="member">Member</option>
+                          <option value="manager">Manager</option>
+                          <option value="admin">Admin</option>
                         </select>
-                        {updatingId === member.id && (
-                          <span className="ml-2 text-xs text-slate-400">
-                            Saving...
-                          </span>
+                        <ChevronDown
+                          size={15}
+                          className="pointer-events-none absolute right-3 top-3 text-slate-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-end">
+                      <button
+                        type="submit"
+                        disabled={addingMember}
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60 md:w-auto"
+                      >
+                        {addingMember ? (
+                          <LoaderCircle
+                            size={16}
+                            className="animate-spin"
+                          />
+                        ) : (
+                          <UserPlus size={16} />
                         )}
-                      </td>
-
-                      <td className="px-6 py-4 text-slate-500">
-                        {new Date(
-                          `${member.joinedAt}T00:00:00`
-                        ).toLocaleDateString(undefined, {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </td>
-                    </tr>
-                  ))
+                        Add member
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                    Only organization admins can add members or change roles.
+                  </div>
                 )}
-              </tbody>
-            </table>
-          </div>
 
-          <div className="flex flex-col justify-between gap-2 border-t border-slate-200 bg-slate-50/70 px-6 py-4 text-sm text-slate-500 sm:flex-row sm:items-center">
-            <span>
-              Showing {filteredMembers.length} of {members.length} members
-            </span>
-            <span>Role changes use mock data in this version</span>
-          </div>
-        </section>
+                <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
+                  <div className="relative">
+                    <Search
+                      size={17}
+                      className="absolute left-3 top-3 text-slate-400"
+                    />
+                    <input
+                      value={search}
+                      onChange={(event) => setSearch(event.target.value)}
+                      placeholder="Search by username or email..."
+                      aria-label="Search members"
+                      className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    />
+                  </div>
 
-        <div className="mt-5 flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50/70 p-4">
-          <ShieldCheck size={20} className="mt-0.5 shrink-0 text-blue-700" />
-          <div>
-            <p className="text-sm font-semibold text-blue-900">
-              Role-based access control
-            </p>
-            <p className="mt-1 text-sm leading-6 text-blue-800">
-              This page demonstrates the member-management UI. Actual
-              permissions must be enforced by the backend when BE1's
-              RBAC endpoints are available.
-            </p>
+                  <select
+                    value={roleFilter}
+                    onChange={(event) =>
+                      setRoleFilter(
+                        event.target.value as "all" | OrganizationRole
+                      )
+                    }
+                    aria-label="Filter by role"
+                    className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  >
+                    <option value="all">All roles</option>
+                    <option value="admin">Admins</option>
+                    <option value="manager">Managers</option>
+                    <option value="member">Members</option>
+                  </select>
+                </div>
+              </div>
+
+              {loadingMembers ? (
+                <div className="flex items-center justify-center gap-2 p-12 text-sm text-slate-500">
+                  <LoaderCircle size={20} className="animate-spin" />
+                  Loading members...
+                </div>
+              ) : filteredMembers.length === 0 ? (
+                <div className="px-5 py-12 text-center">
+                  <Users size={32} className="mx-auto text-slate-300" />
+                  <h3 className="mt-3 font-semibold">No members found</h3>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {members.length === 0
+                      ? "Add a registered user by email to get started."
+                      : "Try changing your search or role filter."}
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[700px] text-left text-sm">
+                    <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                      <tr>
+                        <th className="px-5 py-3 font-semibold">Member</th>
+                        <th className="px-5 py-3 font-semibold">Role</th>
+                        <th className="px-5 py-3 font-semibold">Joined</th>
+                        <th className="px-5 py-3 font-semibold">Actions</th>
+                      </tr>
+                    </thead>
+
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredMembers.map((member) => (
+                        <tr
+                          key={member.id}
+                          className="transition hover:bg-slate-50/70"
+                        >
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700">
+                                {getInitials(member.username, member.email)}
+                              </div>
+
+                              <div className="min-w-0">
+                                <p className="font-semibold text-slate-800">
+                                  {member.username || "Unnamed user"}
+                                </p>
+                                <p className="mt-0.5 break-all text-xs text-slate-500">
+                                  {member.email || "No email available"}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="px-5 py-4">
+                            <span
+                              className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                                member.role === "admin"
+                                  ? "bg-violet-50 text-violet-700"
+                                  : member.role === "manager"
+                                    ? "bg-amber-50 text-amber-700"
+                                    : "bg-slate-100 text-slate-700"
+                              }`}
+                            >
+                              {roleLabels[member.role]}
+                            </span>
+                          </td>
+
+                          <td className="px-5 py-4 text-slate-600">
+                            {formatDate(member.created_at)}
+                          </td>
+
+                          <td className="px-5 py-4">
+                            {isAdmin ? (
+                              <div className="relative flex items-center gap-2">
+                                <select
+                                  aria-label={`Change role for ${member.username || member.email}`}
+                                  value={member.role}
+                                  disabled={
+                                    updatingMemberId !== null ||
+                                    (member.role === "admin" &&
+                                      adminCount <= 1)
+                                  }
+                                  onChange={(event) =>
+                                    void handleRoleChange(
+                                      member,
+                                      event.target.value as OrganizationRole
+                                    )
+                                  }
+                                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-70"
+                                >
+                                  <option value="admin">Admin</option>
+                                  <option value="manager">Manager</option>
+                                  <option value="member">Member</option>
+                                </select>
+
+                                {updatingMemberId === member.id && (
+                                  <LoaderCircle
+                                    size={16}
+                                    className="animate-spin text-indigo-600"
+                                  />
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-slate-400">
+                                View only
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              <footer className="flex flex-col gap-1 border-t border-slate-200 px-5 py-4 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+                <span>
+                  Showing {filteredMembers.length} of {members.length} members
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <ShieldCheck size={14} />
+                  Roles are saved through the Django API
+                </span>
+              </footer>
+            </section>
+          </>
+        )}
+
+        {!loadingOrganizations && organizations.length > 0 && !selectedOrganization && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            Select a workspace to view its members.
           </div>
-        </div>
-      </main>
-    </div>
+        )}
+
+        <p className="text-center text-xs text-slate-400">
+          Organization management · Authenticated access · Django REST API
+        </p>
+      </div>
+    </main>
   );
-};
-
-interface SummaryCardProps {
-  title: string;
-  value: number;
-  icon: React.ReactNode;
-  description: string;
 }
-
-const SummaryCard: React.FC<SummaryCardProps> = ({
-  title,
-  value,
-  icon,
-  description,
-}) => (
-  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-    <div className="mb-4 flex items-center justify-between">
-      <span className="text-sm font-medium text-slate-500">{title}</span>
-      <span className="rounded-xl bg-slate-100 p-2 text-slate-600">
-        {icon}
-      </span>
-    </div>
-    <p className="text-3xl font-bold tracking-tight">{value}</p>
-    <p className="mt-2 text-xs text-slate-500">{description}</p>
-  </div>
-);
