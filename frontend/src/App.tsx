@@ -20,7 +20,7 @@ import { DrivePage } from "./pages/DrivePage";
 import { AutomationsPage } from "./pages/AutomationsPage";
 import { AutomationBuilderPage } from "./pages/AutomationBuilderPage";
 import { AutomationExecutionHistoryPage } from "./pages/AutomationExecutionHistoryPage";
-import { OrganizationAdminPage } from "./pages/OrganizationAdminPage";
+import  OrganizationAdminPage  from "./pages/OrganizationAdminPage";
 
 
 

@@ -1,7 +1,16 @@
+
 import { apiFetch } from "./apiClient";
 
 export type OrganizationRole = "Admin" | "Manager" | "Member";
+export type ApiOrganizationRole = "admin" | "manager" | "member";
 export type MembershipStatus = "Active";
+
+export interface Organization {
+  id: number;
+  name: string;
+  created_at: string;
+  role: ApiOrganizationRole;
+}
 
 export interface OrganizationMember {
   id: number;
@@ -13,6 +22,27 @@ export interface OrganizationMember {
   joinedAt: string;
 }
 
+export interface ApiListResponse<T> {
+  success: boolean;
+  count: number;
+  results: T[];
+}
+
+export interface OrganizationResponse {
+  success: boolean;
+  organization: Organization;
+}
+
+export interface MemberResponse {
+  success: boolean;
+  member: OrganizationMember;
+}
+
+export interface AddMemberPayload {
+  email: string;
+  role: ApiOrganizationRole;
+}
+
 export interface UpdateMemberRolePayload {
   role: OrganizationRole;
 }
@@ -22,12 +52,12 @@ interface ApiMember {
   user_id: number;
   name: string;
   email: string;
-  role: "admin" | "manager" | "member";
+  role: ApiOrganizationRole;
   created_at: string;
 }
 
-const toUiRole = (role: ApiMember["role"]): OrganizationRole => {
-  const roles: Record<ApiMember["role"], OrganizationRole> = {
+const toUiRole = (role: ApiOrganizationRole): OrganizationRole => {
+  const roles: Record<ApiOrganizationRole, OrganizationRole> = {
     admin: "Admin",
     manager: "Manager",
     member: "Member",
@@ -35,8 +65,8 @@ const toUiRole = (role: ApiMember["role"]): OrganizationRole => {
   return roles[role];
 };
 
-const toApiRole = (role: OrganizationRole): ApiMember["role"] => {
-  const roles: Record<OrganizationRole, ApiMember["role"]> = {
+const toApiRole = (role: OrganizationRole): ApiOrganizationRole => {
+  const roles: Record<OrganizationRole, ApiOrganizationRole> = {
     Admin: "admin",
     Manager: "manager",
     Member: "member",
@@ -54,13 +84,28 @@ const toOrganizationMember = (member: ApiMember): OrganizationMember => ({
   joinedAt: member.created_at,
 });
 
+export async function getOrganizations(): Promise<
+  ApiListResponse<Organization>
+> {
+  return apiFetch<ApiListResponse<Organization>>(
+    "/api/rbac/organizations/"
+  );
+}
+
+export async function createOrganization(
+  name: string
+): Promise<OrganizationResponse> {
+  return apiFetch<OrganizationResponse>("/api/rbac/organizations/", {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+}
+
 export async function getOrganizationMembers(
   organizationId: number
-): Promise<{ success: boolean; count: number; results: OrganizationMember[] }> {
+): Promise<ApiListResponse<OrganizationMember>> {
   if (!Number.isInteger(organizationId) || organizationId <= 0) {
-    throw new Error(
-      "A valid organization ID is required. Add ?organization_id=YOUR_ID to the page URL."
-    );
+    throw new Error("A valid organization ID is required.");
   }
 
   const data = await apiFetch<ApiMember[]>(
@@ -71,6 +116,24 @@ export async function getOrganizationMembers(
     success: true,
     count: data.length,
     results: data.map(toOrganizationMember),
+  };
+}
+
+export async function addOrganizationMember(
+  organizationId: number,
+  payload: AddMemberPayload
+): Promise<MemberResponse> {
+  const data = await apiFetch<ApiMember>(
+    `/api/rbac/organizations/${organizationId}/members/`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
+  );
+
+  return {
+    success: true,
+    member: toOrganizationMember(data),
   };
 }
 

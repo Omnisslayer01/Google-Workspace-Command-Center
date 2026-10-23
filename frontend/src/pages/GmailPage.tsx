@@ -11,6 +11,8 @@ import {
   AlertCircle,
   ChevronRight,
   X,
+  Send,
+  PenLine,
 } from "lucide-react";
 
 import { Header } from "../components/common/Header";
@@ -19,11 +21,14 @@ import {
   listGmailMessages,
   searchGmailMessages,
   downloadGmailAttachment,
+  createGmailDraft,
+  sendGmailMessage,
 } from "../lib/gmailApi";
 
 import type {
   GmailMessage,
   GmailMessageStub,
+  GmailComposeRequest,
 } from "../types/gmail";
 
 type GmailAttachment = {
@@ -187,6 +192,14 @@ export const GmailPage: React.FC = () => {
 
   const [search, setSearch] = useState("");
   const [activeSearch, setActiveSearch] = useState("");
+  const [currentFolder, setCurrentFolder] = useState<"inbox" | "drafts" | "sent">("inbox");
+
+  const [showCompose, setShowCompose] = useState(false);
+  const [composeTo, setComposeTo] = useState("");
+  const [composeSubject, setComposeSubject] = useState("");
+  const [composeBody, setComposeBody] = useState("");
+  const [composeBusy, setComposeBusy] = useState(false);
+  const [composeMessage, setComposeMessage] = useState<string | null>(null);
 
   const [selectedMessage, setSelectedMessage] =
     useState<GmailMessage | null>(null);
@@ -210,9 +223,14 @@ export const GmailPage: React.FC = () => {
           setSelectedMessage(null);
         }
 
-        const response = activeSearch
+        const gmailQuery = activeSearch || (
+          currentFolder === "drafts" ? "in:drafts" :
+          currentFolder === "sent" ? "in:sent" : ""
+        );
+
+        const response = gmailQuery
           ? await searchGmailMessages({
-              q: activeSearch,
+              q: gmailQuery,
               max_results: 20,
               page_token: pageToken,
             })
@@ -248,7 +266,7 @@ export const GmailPage: React.FC = () => {
         setLoadingMore(false);
       }
     },
-    [activeSearch]
+    [activeSearch, currentFolder]
   );
 
   useEffect(() => {
@@ -396,6 +414,68 @@ export const GmailPage: React.FC = () => {
     }
   };
 
+  const handleCompose = async (action: "draft" | "send"): Promise<void> => {
+    if (!composeTo.trim()) {
+      setComposeMessage("Please enter a recipient email address.");
+      return;
+    }
+
+    if (!composeSubject.trim()) {
+      setComposeMessage("Please enter a subject.");
+      return;
+    }
+
+    if (!composeBody.trim()) {
+      setComposeMessage("Please enter a message.");
+      return;
+    }
+
+    const payload: GmailComposeRequest = {
+      to: composeTo.trim(),
+      subject: composeSubject.trim(),
+      body: composeBody,
+    };
+
+    try {
+      setComposeBusy(true);
+      setComposeMessage(null);
+      setError(null);
+
+      if (action === "draft") {
+        await createGmailDraft(payload);
+        setComposeMessage("Draft saved successfully. Open Drafts to view it.");
+        setCurrentFolder("drafts");
+        setActiveSearch("");
+        setSearch("");
+      } else {
+        await sendGmailMessage(payload);
+        setComposeMessage("Email sent successfully. Open Sent to view it.");
+        setCurrentFolder("sent");
+        setActiveSearch("");
+        setSearch("");
+        setComposeTo("");
+        setComposeSubject("");
+        setComposeBody("");
+      }
+    } catch (err: unknown) {
+      setComposeMessage(
+        err instanceof Error ? err.message : "Gmail operation failed."
+      );
+    } finally {
+      setComposeBusy(false);
+    }
+  };
+
+  const selectFolder = (folder: "inbox" | "drafts" | "sent"): void => {
+    setCurrentFolder(folder);
+    setActiveSearch("");
+    setSearch("");
+    setSelectedMessage(null);
+    setNextPageToken(null);
+  };
+
+  const folderTitle = currentFolder === "drafts" ? "Drafts" : currentFolder === "sent" ? "Sent" : "Inbox";
+
   const messageDetails = selectedMessage
     ? getMessageDetails(selectedMessage)
     : null;
@@ -418,27 +498,57 @@ export const GmailPage: React.FC = () => {
               </span>
             </div>
 
-            <h1 className="text-3xl font-bold tracking-tight">Inbox</h1>
+            <h1 className="text-3xl font-bold tracking-tight">{folderTitle}</h1>
             <p className="mt-1 text-sm text-slate-500">
               View and manage messages connected to your Google Workspace
               account.
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => void loadInbox()}
-            disabled={loading}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-          >
-            <RefreshCw
-              className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`}
-            />
-            {loading ? "Loading..." : "Refresh"}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setShowCompose(true);
+                setComposeMessage(null);
+              }}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#4285F4] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#3367d6]"
+            >
+              <PenLine className="h-4 w-4" />
+              Compose
+            </button>
+            <button
+              type="button"
+              onClick={() => void loadInbox()}
+              disabled={loading}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              <RefreshCw
+                className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`}
+              />
+              {loading ? "Loading..." : "Refresh"}
+            </button>
+          </div>
         </div>
 
-        <div className="mt-6">
+        <div className="mt-5 flex flex-wrap gap-2 border-b border-slate-200 pb-4">
+          {(["inbox", "drafts", "sent"] as const).map((folder) => (
+            <button
+              key={folder}
+              type="button"
+              onClick={() => selectFolder(folder)}
+              className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+                currentFolder === folder && !activeSearch
+                  ? "bg-blue-50 text-[#1a73e8]"
+                  : "text-slate-600 hover:bg-slate-100"
+              }`}
+            >
+              {folder === "inbox" ? "Inbox" : folder === "drafts" ? "Drafts" : "Sent"}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-5">
           <form onSubmit={handleSearch} className="flex gap-2">
             <div className="relative min-w-0 flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -446,7 +556,7 @@ export const GmailPage: React.FC = () => {
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search Gmail — e.g. from:alice subject:invoice"
+                placeholder="Search Gmail â€” e.g. from:alice subject:invoice"
                 aria-label="Search Gmail"
                 className="w-full rounded-lg border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none focus:border-[#4285F4] focus:ring-2 focus:ring-blue-100"
               />
@@ -500,6 +610,80 @@ export const GmailPage: React.FC = () => {
               </button>
             </div>
           </div>
+        )}
+
+        {showCompose && (
+          <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">New message</h2>
+              <button
+                type="button"
+                onClick={() => setShowCompose(false)}
+                className="rounded-lg p-2 hover:bg-slate-100"
+                aria-label="Close compose"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void handleCompose("send");
+              }}
+              className="space-y-4"
+            >
+              <input
+                type="email"
+                required
+                value={composeTo}
+                onChange={(event) => setComposeTo(event.target.value)}
+                placeholder="Recipient email"
+                aria-label="Recipient email"
+                className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#4285F4]"
+              />
+              <input
+                type="text"
+                required
+                value={composeSubject}
+                onChange={(event) => setComposeSubject(event.target.value)}
+                placeholder="Subject"
+                aria-label="Subject"
+                className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#4285F4]"
+              />
+              <textarea
+                required
+                rows={7}
+                value={composeBody}
+                onChange={(event) => setComposeBody(event.target.value)}
+                placeholder="Write your message..."
+                aria-label="Message body"
+                className="w-full resize-y rounded-lg border border-slate-200 px-3 py-3 text-sm outline-none focus:border-[#4285F4]"
+              />
+              {composeMessage && (
+                <p role="status" className="break-words text-sm text-slate-600">
+                  {composeMessage}
+                </p>
+              )}
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  disabled={composeBusy}
+                  onClick={() => void handleCompose("draft")}
+                  className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50"
+                >
+                  {composeBusy ? "Please wait..." : "Save Draft"}
+                </button>
+                <button
+                  type="submit"
+                  disabled={composeBusy}
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#4285F4] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#3367d6] disabled:opacity-50"
+                >
+                  <Send className="h-4 w-4" />
+                  {composeBusy ? "Please wait..." : "Send"}
+                </button>
+              </div>
+            </form>
+          </section>
         )}
 
         <section className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -601,7 +785,7 @@ export const GmailPage: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <Inbox className="h-4 w-4 text-[#EA4335]" />
                   <h2 className="text-sm font-semibold">
-                    {activeSearch ? "Search Results" : "Inbox"}
+                    {activeSearch ? "Search Results" : folderTitle}
                   </h2>
                   {!loading && (
                     <span className="text-xs text-slate-400">
@@ -634,7 +818,11 @@ export const GmailPage: React.FC = () => {
                       ? "Check your connection and try again."
                       : activeSearch
                         ? "Try a different Gmail search."
-                        : "Your inbox is empty."}
+                        : currentFolder === "drafts"
+                          ? "No drafts found."
+                          : currentFolder === "sent"
+                            ? "No sent messages found."
+                            : "Your inbox is empty."}
                   </p>
 
                   {error && (

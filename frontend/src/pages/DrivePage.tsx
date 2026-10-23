@@ -4,6 +4,7 @@ import {
   AlertCircle,
   ArrowLeft,
   Download,
+  ExternalLink,
   File,
   FileSpreadsheet,
   FileText,
@@ -22,6 +23,7 @@ import {
   listDriveFiles,
   uploadDriveFile,
   saveDriveFile,
+  downloadDriveFile,
 } from '../lib/driveApi';
 
 import type { DriveFileItem } from '../types';
@@ -200,6 +202,53 @@ export const DrivePage: React.FC = () => {
    *
    * Authorization: Bearer <access_token>
    */
+
+  const handleOpenFile = async (file: DriveFileItem) => {
+    if (!file.id || file.type === 'folder') {
+      return;
+    }
+
+    // Open a tab immediately to avoid browser popup blocking.
+    const newTab = window.open('about:blank', '_blank');
+
+    if (!newTab) {
+      setError('Please allow pop-ups to open files in a new tab.');
+      return;
+    }
+
+    setError('');
+
+    try {
+      // Use Google's own preview/editor when a Drive link exists.
+      if (file.webViewLink) {
+        newTab.opener = null;
+        newTab.location.href = file.webViewLink;
+        return;
+      }
+
+      // Otherwise, fetch the file with authentication.
+      const blob = await downloadDriveFile(file.id);
+      const objectUrl = URL.createObjectURL(blob);
+
+      newTab.opener = null;
+      newTab.location.href = objectUrl;
+
+      // Keep the URL alive long enough for the browser to load it.
+      window.setTimeout(() => {
+        URL.revokeObjectURL(objectUrl);
+      }, 60_000);
+    } catch (err: unknown) {
+      newTab.close();
+
+      console.error('Failed to open Drive file:', err);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : `Unable to open "${file.name}".`,
+      );
+    }
+  };
   const handleDownload = async (file: DriveFileItem) => {
     if (!file.id) {
       setError(
@@ -460,9 +509,16 @@ export const DrivePage: React.FC = () => {
                       {file.name}
                     </button>
                   ) : (
-                    <span className="truncate text-sm font-semibold text-slate-800">
-                      {file.name}
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void handleOpenFile(file)}
+                      disabled={loading || uploading}
+                      className="flex min-w-0 items-center gap-2 truncate text-left text-sm font-semibold text-slate-800 hover:text-[#4285F4] disabled:cursor-not-allowed"
+                      title={`Open ${file.name}`}
+                    >
+                      <span className="truncate">{file.name}</span>
+                      <ExternalLink className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    </button>
                   )}
 
                 </div>
