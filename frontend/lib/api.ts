@@ -56,7 +56,16 @@ async function apiFetch<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = `${BASE_URL}${path}`;
+  // Candidate bases to try in order of preference
+  const candidateBases = [
+    BASE_URL,
+    "http://127.0.0.1:8001",
+    "http://localhost:8001",
+    "http://127.0.0.1:8000",
+    "http://localhost:8000",
+    "",
+  ];
+  const uniqueBases = Array.from(new Set(candidateBases.filter((b) => typeof b === "string")));
 
   // These endpoints must be accessible without an existing JWT.
   // In particular, Google OAuth initiation must remain public.
@@ -73,7 +82,6 @@ async function apiFetch<T>(
   const headers = new Headers(options.headers);
 
   // Only send Content-Type when the request has a body.
-  // This prevents unnecessary CORS preflight requests for GET endpoints.
   if (options.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
@@ -86,27 +94,43 @@ async function apiFetch<T>(
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const res = await fetch(url, {
-    ...options,
-    headers,
-  });
+  let lastError: unknown = null;
 
-  let data: unknown;
+  for (const base of uniqueBases) {
+    const url = `${base}${path}`;
+    try {
+      const res = await fetch(url, {
+        ...options,
+        headers,
+      });
 
-  try {
-    data = await res.json();
-  } catch {
-    data = {};
+      let data: unknown;
+      try {
+        data = await res.json();
+      } catch {
+        data = {};
+      }
+
+      if (!res.ok) {
+        throw new ApiResponseError(
+          res.status,
+          data as ApiError
+        );
+      }
+
+      return data as T;
+    } catch (err) {
+      lastError = err;
+      // If it's an HTTP response error with status code from server (like 400, 401, 500), don't try other hosts
+      if (err instanceof ApiResponseError) {
+        throw err;
+      }
+      // If it's a network/fetch connection refused error, loop and try next candidate base
+      continue;
+    }
   }
 
-  if (!res.ok) {
-    throw new ApiResponseError(
-      res.status,
-      data as ApiError
-    );
-  }
-
-  return data as T;
+  throw lastError || new Error("Failed to connect to backend server. Please verify backend is running.");
 }
 
 // ─── Auth endpoints ──────────────────────────────────────────────────────────

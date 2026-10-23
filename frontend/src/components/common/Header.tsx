@@ -12,7 +12,6 @@ import {
   HardDrive,
   Zap,
   History,
-  Activity,
   LogOut,
   User,
   ChevronDown,
@@ -108,12 +107,6 @@ export const Header: React.FC<HeaderProps> = ({
       icon: History,
     },
     {
-      to: '/audit',
-      label: 'Audit Log',
-      icon: Activity,
-    },
-
-        {
       to: '/organization',
       label: 'Team Admin',
       icon: Users,
