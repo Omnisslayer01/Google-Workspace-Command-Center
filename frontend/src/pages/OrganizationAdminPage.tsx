@@ -20,12 +20,13 @@ import {
   getOrganizationMembers,
   getOrganizations,
   updateOrganizationMemberRole,
+  type ApiOrganizationRole,
   type Organization,
   type OrganizationMember,
   type OrganizationRole,
 } from "../lib/organizationApi";
 
-const roleLabels: Record<OrganizationRole, string> = {
+const roleLabels: Record<ApiOrganizationRole, string> = {
   admin: "Admin",
   manager: "Manager",
   member: "Member",
@@ -48,8 +49,8 @@ function formatDate(value: string): string {
   });
 }
 
-function getInitials(username: string, email: string): string {
-  const value = username?.trim() || email?.trim() || "U";
+function getInitials(name: string, email: string): string {
+  const value = name?.trim() || email?.trim() || "U";
 
   return value
     .split(/[\s._@-]+/)
@@ -77,7 +78,7 @@ export default function OrganizationAdminPage() {
   const [organizationName, setOrganizationName] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [memberEmail, setMemberEmail] = useState("");
-  const [memberRole, setMemberRole] = useState<OrganizationRole>("member");
+  const [memberRole, setMemberRole] = useState<ApiOrganizationRole>("member");
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | OrganizationRole>(
     "all"
@@ -242,19 +243,19 @@ export default function OrganizationAdminPage() {
     setSuccess("");
 
     try {
-      const response = await updateOrganizationMemberRole(
+      const updatedMember = await updateOrganizationMemberRole(
         selectedOrganizationId,
-        member.id,
+        member.userId,
         { role: newRole }
       );
 
       setMembers((current) =>
         current.map((item) =>
-          item.id === member.id ? response.member : item
+          item.id === member.id ? updatedMember : item
         )
       );
 
-      setSuccess(`Updated ${member.username || member.email}'s role.`);
+      setSuccess(`Updated ${member.name || member.email}'s role.`);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -268,7 +269,7 @@ export default function OrganizationAdminPage() {
     return members.filter((member) => {
       const matchesSearch =
         !normalizedSearch ||
-        member.username.toLowerCase().includes(normalizedSearch) ||
+        member.name.toLowerCase().includes(normalizedSearch) ||
         member.email.toLowerCase().includes(normalizedSearch);
 
       const matchesRole = roleFilter === "all" || member.role === roleFilter;
@@ -277,9 +278,9 @@ export default function OrganizationAdminPage() {
     });
   }, [members, search, roleFilter]);
 
-  const adminCount = members.filter((member) => member.role === "admin").length;
+  const adminCount = members.filter((member) => member.role === "Admin").length;
   const managerCount = members.filter(
-    (member) => member.role === "manager"
+    (member) => member.role === "Manager"
   ).length;
 
   return (
@@ -593,7 +594,7 @@ export default function OrganizationAdminPage() {
                           value={memberRole}
                           onChange={(event) =>
                             setMemberRole(
-                              event.target.value as OrganizationRole
+                              event.target.value as ApiOrganizationRole
                             )
                           }
                           className="w-full appearance-none rounded-lg border border-slate-300 bg-white px-3 py-2.5 pr-9 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
@@ -659,9 +660,9 @@ export default function OrganizationAdminPage() {
                     className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                   >
                     <option value="all">All roles</option>
-                    <option value="admin">Admins</option>
-                    <option value="manager">Managers</option>
-                    <option value="member">Members</option>
+                    <option value="Admin">Admins</option>
+                    <option value="Manager">Managers</option>
+                    <option value="Member">Members</option>
                   </select>
                 </div>
               </div>
@@ -702,12 +703,12 @@ export default function OrganizationAdminPage() {
                           <td className="px-5 py-4">
                             <div className="flex items-center gap-3">
                               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700">
-                                {getInitials(member.username, member.email)}
+                                {getInitials(member.name, member.email)}
                               </div>
 
                               <div className="min-w-0">
                                 <p className="font-semibold text-slate-800">
-                                  {member.username || "Unnamed user"}
+                                  {member.name || "Unnamed user"}
                                 </p>
                                 <p className="mt-0.5 break-all text-xs text-slate-500">
                                   {member.email || "No email available"}
@@ -719,30 +720,30 @@ export default function OrganizationAdminPage() {
                           <td className="px-5 py-4">
                             <span
                               className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-                                member.role === "admin"
+                                member.role === "Admin"
                                   ? "bg-violet-50 text-violet-700"
-                                  : member.role === "manager"
+                                  : member.role === "Manager"
                                     ? "bg-amber-50 text-amber-700"
                                     : "bg-slate-100 text-slate-700"
                               }`}
                             >
-                              {roleLabels[member.role]}
+                              {member.role}
                             </span>
                           </td>
 
                           <td className="px-5 py-4 text-slate-600">
-                            {formatDate(member.created_at)}
+                            {formatDate(member.joinedAt)}
                           </td>
 
                           <td className="px-5 py-4">
                             {isAdmin ? (
                               <div className="relative flex items-center gap-2">
                                 <select
-                                  aria-label={`Change role for ${member.username || member.email}`}
+                                  aria-label={`Change role for ${member.name || member.email}`}
                                   value={member.role}
                                   disabled={
                                     updatingMemberId !== null ||
-                                    (member.role === "admin" &&
+                                    (member.role === "Admin" &&
                                       adminCount <= 1)
                                   }
                                   onChange={(event) =>
@@ -753,9 +754,9 @@ export default function OrganizationAdminPage() {
                                   }
                                   className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-70"
                                 >
-                                  <option value="admin">Admin</option>
-                                  <option value="manager">Manager</option>
-                                  <option value="member">Member</option>
+                                  <option value="Admin">Admin</option>
+                                  <option value="Manager">Manager</option>
+                                  <option value="Member">Member</option>
                                 </select>
 
                                 {updatingMemberId === member.id && (

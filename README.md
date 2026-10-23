@@ -57,3 +57,43 @@ To run the complete test suite:
 ```bash
 python manage.py test
 ```
+
+
+---
+
+## --- OR ---
+
+## Running with Docker Compose
+
+If you prefer using Docker, you can start the entire stack (Django Backend, Frontend, Redis, Celery Worker, and Celery Beat) with a single command using Docker Compose.
+
+### 1. Prerequisites
+- Docker and Docker Desktop running.
+- Ensure your `backend/.env` file is configured with your Google OAuth credentials and environment variables (as detailed in the Google Cloud Console Setup section above).
+
+### 2. Build and Start All Services
+From the root directory of the project, run:
+```bash
+docker compose up --build
+```
+*(or `docker-compose up --build`)*
+
+In another terminal (after the above is built) run the following command to create the tables when running the postgresSQL in your pc for the first time and wait for a min
+```bash
+docker exec -it Django_container python manage.py migrate
+```
+Note: Once migrated you do not need to run the command again and again 
+
+
+This starts all services:
+- **Frontend (Vite):** `http://localhost:5173`
+- **Django API Backend:** `http://localhost:8001`
+- **Redis:** `localhost:6379`
+- **Celery Worker:** Background task execution
+- **Celery Beat:** Scheduled task runner
+
+### 3. Stopping the Services
+To stop all containers:
+```bash
+docker compose down
+```

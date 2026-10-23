@@ -1,0 +1,109 @@
+version: "3.8"
+
+services:
+
+  django:       #<----npm depends on
+    build: ./backend
+    container_name: "Django_container"
+    image: django_app
+    ports: 
+      - "8001:8001" #Since there are multiple ports and network(not here) so we need to provide them in a list format
+    networks: 
+      - my_network 
+    env_file:
+      - "backend/.env" #docker allows you to pass multiple env files at the same time so it expects a list format for this too
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - REDIS_URL=redis://redis:6379/0
+    #in environment when you use key=value format to define the pair then everything after the = is taken literally 
+    #meaning if you use pasword="nig" then your password is- "nig" so dont use ""
+    depends_on:
+      - database
+
+  node:
+    container_name: "frontend"
+    image: frontend_app
+    build: ./frontend
+    ports: 
+      - "5173:5173"
+    networks: 
+      - my_network
+    depends_on: 
+      - django
+    environment:
+      - VITE_BACKEND_URL=http://django:8001
+
+  redis:
+    container_name: "gwcc_redis"
+    image: redis:alpine   #uses standard redis image that is prebuilt by docker when you do this
+    # for other apps this wasnt needed as they are all custom images you're building using the build command 
+    # and their image_name doesnt match with any standard image
+    ports:
+      - "6379:6379"
+    networks:
+      - my_network
+    depends_on:
+      - django 
+    
+  
+  celery:
+    container_name: celery_worker
+    image: celery_worker
+    build: ./backend
+    command: celery -A config worker -l info --pool=solo
+    depends_on:
+      - django
+      - redis
+      - database
+    networks:
+      - my_network
+    env_file:
+      - "./backend/.env"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - REDIS_URL=redis://redis:6379/0
+
+
+  celery_beat:
+    container_name: celery_beat
+    image: celery_beat
+    networks:
+      - my_network
+    build: ./backend
+    env_file:
+      - "./backend/.env"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - django
+      - celery
+      - redis
+      - database
+    command: celery -A config beat -l info
+
+  database:
+    container_name: postgres_sql
+    image: postgres:alpine
+    ports:
+     - "5432:5432"
+    networks:
+      - my_network
+    environment:
+      - POSTGRES_DB=gwcc_db
+      - POSTGRES_PASSWORD=new_password
+      - POSTGRES_USER=admin
+    volumes:
+      - gwcc_database:/var/lib/postgresql #this is where the postgres stores it tables
+
+  
+
+  
+networks:
+  my_network: #needs a : so yaml knows its an object not a string i tried understanding but didnt so for now just do it
+
+volumes:
+  gwcc_database:

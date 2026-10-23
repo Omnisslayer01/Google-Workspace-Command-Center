@@ -45,8 +45,10 @@ export const TasksPage: React.FC = () => {
     setLoadingTasks(true);
     setLoadError(null);
     setActionError(null);
+    setTasks([]);
+
     try {
-      await tasksApi.syncTasks();
+      await tasksApi.syncGoogleTasks();
       const response = await tasksApi.listTasks();
 
       if (Array.isArray(response?.data)) {
@@ -57,9 +59,15 @@ export const TasksPage: React.FC = () => {
         console.warn('Unexpected tasks API response:', response);
         setTasks([]);
       }
-    } catch (error: any) {
-      console.error('Failed to load tasks:', error);
-      setLoadError(error?.message || 'Failed to load tasks from the server.');
+    } catch (error: unknown) {
+      console.error('Failed to sync/load tasks:', error);
+
+      setLoadError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to synchronize Google Tasks.'
+      );
+
       setTasks([]);
     } finally {
       setLoadingTasks(false);
@@ -234,8 +242,8 @@ export const TasksPage: React.FC = () => {
   const completionPercentage =
     totalCount > 0
       ? Math.round(
-          (completedCount / totalCount) * 100
-        )
+        (completedCount / totalCount) * 100
+      )
       : 0;
 
   // ---------------------------------------------------------
@@ -425,11 +433,10 @@ export const TasksPage: React.FC = () => {
                 onClick={() =>
                   setStatusFilter(status)
                 }
-                className={`px-3 py-1.5 rounded-md text-xs font-semibold capitalize whitespace-nowrap transition-colors ${
-                  statusFilter === status
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold capitalize whitespace-nowrap transition-colors ${statusFilter === status
                     ? 'bg-white text-slate-900 shadow-sm font-bold'
                     : 'text-slate-600 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 {status.replace('_', ' ')}
               </button>

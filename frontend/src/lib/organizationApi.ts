@@ -1,21 +1,25 @@
+
 import { apiFetch } from "./apiClient";
 
-export type OrganizationRole = "admin" | "manager" | "member";
+export type OrganizationRole = "Admin" | "Manager" | "Member";
+export type ApiOrganizationRole = "admin" | "manager" | "member";
+export type MembershipStatus = "Active";
 
 export interface Organization {
   id: number;
   name: string;
   created_at: string;
-  role: OrganizationRole;
+  role: ApiOrganizationRole;
 }
 
 export interface OrganizationMember {
   id: number;
-  user_id: number;
-  username: string;
+  userId: number;
+  name: string;
   email: string;
   role: OrganizationRole;
-  created_at: string;
+  status: MembershipStatus;
+  joinedAt: string;
 }
 
 export interface ApiListResponse<T> {
@@ -36,12 +40,49 @@ export interface MemberResponse {
 
 export interface AddMemberPayload {
   email: string;
-  role: OrganizationRole;
+  role: ApiOrganizationRole;
 }
 
 export interface UpdateMemberRolePayload {
   role: OrganizationRole;
 }
+
+interface ApiMember {
+  id: number;
+  user_id: number;
+  name: string;
+  email: string;
+  role: ApiOrganizationRole;
+  created_at: string;
+}
+
+const toUiRole = (role: ApiOrganizationRole): OrganizationRole => {
+  const roles: Record<ApiOrganizationRole, OrganizationRole> = {
+    admin: "Admin",
+    manager: "Manager",
+    member: "Member",
+  };
+  return roles[role];
+};
+
+const toApiRole = (role: OrganizationRole): ApiOrganizationRole => {
+  const roles: Record<OrganizationRole, ApiOrganizationRole> = {
+    Admin: "admin",
+    Manager: "manager",
+    Member: "member",
+  };
+  return roles[role];
+};
+
+const toOrganizationMember = (member: ApiMember): OrganizationMember => ({
+  id: member.id,
+  userId: member.user_id,
+  name: member.name,
+  email: member.email,
+  role: toUiRole(member.role),
+  status: "Active",
+  joinedAt: member.created_at,
+});
 
 export async function getOrganizations(): Promise<
   ApiListResponse<Organization>
@@ -63,34 +104,52 @@ export async function createOrganization(
 export async function getOrganizationMembers(
   organizationId: number
 ): Promise<ApiListResponse<OrganizationMember>> {
-  return apiFetch<ApiListResponse<OrganizationMember>>(
-    `/api/rbac/organizations/${organizationId}/members/`
+  if (!Number.isInteger(organizationId) || organizationId <= 0) {
+    throw new Error("A valid organization ID is required.");
+  }
+
+  const data = await apiFetch<ApiMember[]>(
+    `/api/rbac/orgs/${organizationId}/members/`
   );
+
+  return {
+    success: true,
+    count: data.length,
+    results: data.map(toOrganizationMember),
+  };
 }
 
 export async function addOrganizationMember(
   organizationId: number,
   payload: AddMemberPayload
 ): Promise<MemberResponse> {
-  return apiFetch<MemberResponse>(
+  const data = await apiFetch<ApiMember>(
     `/api/rbac/organizations/${organizationId}/members/`,
     {
       method: "POST",
       body: JSON.stringify(payload),
     }
   );
+
+  return {
+    success: true,
+    member: toOrganizationMember(data),
+  };
 }
 
 export async function updateOrganizationMemberRole(
   organizationId: number,
-  membershipId: number,
+  userId: number,
   payload: UpdateMemberRolePayload
-): Promise<MemberResponse> {
-  return apiFetch<MemberResponse>(
-    `/api/rbac/organizations/${organizationId}/members/${membershipId}/role/`,
+): Promise<OrganizationMember> {
+  const data = await apiFetch<ApiMember>(
+    `/api/rbac/orgs/${organizationId}/members/${userId}/role/`,
     {
       method: "PATCH",
-      body: JSON.stringify(payload),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role: toApiRole(payload.role) }),
     }
   );
+
+  return toOrganizationMember(data);
 }

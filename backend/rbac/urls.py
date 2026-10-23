@@ -6,9 +6,12 @@ from .views import (
     OrganizationsView,
     OrganizationMembersView,
     OrganizationMemberRoleView,
+    OrgMemberListView,
+    OrgMemberRoleUpdateView,
 )
 
 urlpatterns = [
+    # Existing feature-branch routes
     path(
         "test-permission/",
         TestOrgPermissionView.as_view(),
@@ -28,5 +31,17 @@ urlpatterns = [
         "organizations/<int:organization_id>/members/<int:membership_id>/role/",
         OrganizationMemberRoleView.as_view(),
         name="organization_member_role",
+    ),
+
+    # Routes from main
+    path(
+        "orgs/<int:organization_id>/members/",
+        OrgMemberListView.as_view(),
+        name="org_members",
+    ),
+    path(
+        "orgs/<int:organization_id>/members/<int:user_id>/role/",
+        OrgMemberRoleUpdateView.as_view(),
+        name="org_member_role",
     ),
 ]
