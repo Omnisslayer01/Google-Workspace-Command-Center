@@ -9,21 +9,16 @@ logger = logging.getLogger(__name__)
 def check_scheduled_triggers():
     """
     Periodic task to check for time-based triggers that are due.
-    For each due trigger, it initiates an execution.
+    For each due trigger, it initiates an execution via Celery.
     """
     logger.info("Checking for scheduled triggers...")
-    
-    # Example logic for fetching scheduled triggers
-    # In a real scenario, we'd parse Trigger.config to check the schedule
-    triggers = Trigger.objects.filter(type='scheduled')
+    triggers = Trigger.objects.filter(type='scheduled', automation__is_active=True)
     for trigger in triggers:
-        # Placeholder for actual due-check logic
-        is_due = True
-        
-        if is_due:
-            # Create execution
+        try:
             execution = AutomationExecution.objects.create(automation=trigger.automation)
             run_automation.delay(execution.id, {"source": "scheduled"})
+        except Exception as e:
+            logger.warning(f"Error executing scheduled trigger {trigger.id}: {e}")
 
 
 from automation.executor import AutomationExecutor
@@ -31,7 +26,8 @@ from automation.executor import AutomationExecutor
 @shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=True, max_retries=5)
 def run_automation(self, execution_id, trigger_payload):
     """
-    Executes the automation steps. Uses exponential backoff for retries.
+    Executes the automation steps in background via Celery.
+    Uses exponential backoff for retries.
     Checks idempotency before executing actions.
     """
     execution = AutomationExecution.objects.get(id=execution_id)
@@ -49,13 +45,20 @@ def run_automation(self, execution_id, trigger_payload):
 @shared_task
 def poll_gmail_triggers():
     logger.info("Polling Gmail triggers...")
-    triggers = Trigger.objects.filter(type='gmail_new', automation__is_active=True)
+    triggers = Trigger.objects.filter(type__in=['gmail_new', 'gmail_search'], automation__is_active=True)
     for trigger in triggers:
         from gmail_integration.services import GmailService
         try:
             service = GmailService(trigger.automation.owner)
             last_polled = trigger.last_polled_at
-            query = f"after:{int(last_polled.timestamp())}" if last_polled else ""
+            query_parts = []
+            if last_polled:
+                query_parts.append(f"after:{int(last_polled.timestamp())}")
+            custom_q = trigger.config.get("query") or trigger.config.get("q")
+            if custom_q:
+                query_parts.append(str(custom_q))
+            query = " ".join(query_parts)
+
             response = service.list_messages(query=query, max_results=10)
             messages = response.get("messages", [])
             for msg in messages:
@@ -69,7 +72,7 @@ def poll_gmail_triggers():
 @shared_task
 def poll_calendar_triggers():
     logger.info("Polling Calendar triggers...")
-    triggers = Trigger.objects.filter(type='calendar_new', automation__is_active=True)
+    triggers = Trigger.objects.filter(type__in=['calendar_new', 'calendar_upcoming'], automation__is_active=True)
     for trigger in triggers:
         from calendar_integration.services import CalendarService
         try:
