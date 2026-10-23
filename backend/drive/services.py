@@ -82,11 +82,11 @@ class DriveService:
             .execute()
         )
 
-    
+
     def download(self, file_id):
         return self.drive.files().get_media(fileId=file_id)
 
-    
+
     def get_file_metadata(self, file_id):
         return (
             self.drive.files()
