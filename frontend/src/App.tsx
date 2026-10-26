@@ -122,15 +122,6 @@ export const App: React.FC = () => {
         />
 
         <Route
-  path="/organization"
-  element={
-    <ProtectedRoute>
-      <OrganizationAdminPage />
-    </ProtectedRoute>
-  }
-/>
-
-        <Route
   path="/gmail"
   element={
     <ProtectedRoute>
