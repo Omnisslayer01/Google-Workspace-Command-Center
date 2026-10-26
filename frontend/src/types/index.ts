@@ -144,6 +144,7 @@ export interface SpreadsheetItem {
   id: string;
   title: string;
   lastModified: string;
+  webViewLink?: string;
   worksheets: WorksheetItem[];
 }
 

@@ -153,6 +153,8 @@ export const Dashboard: React.FC = () => {
 
     // 2. TASKS
     try {
+      await tasksApi.syncTasks();
+
       const result = await tasksApi.listTasks();
       setTasks(normalizeArray<WorkspaceTask>(result?.data));
     } catch (err: any) {

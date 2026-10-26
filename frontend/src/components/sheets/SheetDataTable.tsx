@@ -6,6 +6,7 @@ import {
   Table,
   Download,
 } from 'lucide-react';
+import { sheetsApi } from '../../lib/sheetsApi';
 
 interface SheetDataTableProps {
   worksheet: WorksheetItem;
@@ -368,7 +369,7 @@ export const SheetDataTable: React.FC<SheetDataTableProps> = ({
           <button
             type="button"
             onClick={() =>
-              alert('Worksheet export generated.')
+              sheetsApi.exportCsv(worksheet, `${worksheet.title || 'worksheet'}.csv`)
             }
             className="
               inline-flex

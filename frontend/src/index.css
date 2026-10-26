@@ -6,6 +6,17 @@
   html {
     scroll-behavior: smooth;
   }
+
+    body,
+  #root {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  body {
+    overflow-x: clip;
+  }
   
   /* Crisp line and border rendering */
   * {

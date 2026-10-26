@@ -5,6 +5,7 @@ from .views import (
     SheetMetadataView,
     SheetValuesView,
     SheetAppendView,
+    SheetExportView,
 )
 
 urlpatterns = [
@@ -12,4 +13,5 @@ urlpatterns = [
     path("<str:spreadsheet_id>/metadata/", SheetMetadataView.as_view(), name="sheet-metadata"),
     path("<str:spreadsheet_id>/values/", SheetValuesView.as_view(), name="sheet-values"),
     path("<str:spreadsheet_id>/values/append/", SheetAppendView.as_view(), name="sheet-append"),
+    path("<str:spreadsheet_id>/export/", SheetExportView.as_view(), name="sheet-export"),
 ]
