@@ -108,55 +108,91 @@ class GoogleTasksService:
         except Exception as exc:
             logger.warning("Failed to delete task from Google Tasks: %s", exc)
             return False
-
     def sync_from_google(self):
-        """
-        Fetch tasks from Google Tasks @default list and merge them into PostgreSQL without duplicating.
-        """
         if not self.service:
-            return {'synced': 0, 'created': 0, 'updated': 0, 'connected': False}
+            return {
+                'synced': 0,
+                'created': 0,
+                'updated': 0,
+                'connected': False,
+            }
 
+        from django.utils.dateparse import parse_datetime
         from .models import Task
+
         created_count = 0
         updated_count = 0
+        synced_count = 0
 
         try:
-            res = self.service.tasks().list(tasklist='@default', maxResults=100).execute()
-            items = res.get('items', [])
+            page_token = None
 
-            for item in items:
-                gt_id = item.get('id')
-                if not gt_id:
-                    continue
+            while True:
+                params = {
+                    'tasklist': '@default',
+                    'maxResults': 100,
+                }
+                if page_token:
+                    params['pageToken'] = page_token
 
-                title = item.get('title', '').strip() or 'Untitled Task'
-                notes = item.get('notes', '')
-                status = 'completed' if item.get('status') == 'completed' else 'todo'
-                due_str = item.get('due')
+                response = self.service.tasks().list(**params).execute()
+                items = response.get('items', [])
 
-                existing = Task.objects.filter(owner=self.user, google_task_id=gt_id).first()
-                if existing:
-                    existing.title = title
-                    existing.description = notes
-                    existing.status = status
-                    existing.save(update_fields=['title', 'description', 'status', 'updated_at'])
-                    updated_count += 1
-                else:
-                    Task.objects.create(
+                for item in items:
+                    google_id = item.get('id')
+                    if not google_id:
+                        continue
+
+                    due_date = None
+                    if item.get('due'):
+                        due_date = parse_datetime(item['due'])
+                        if due_date is None:
+                            logger.warning(
+                                "Invalid due date for Google task %s",
+                                google_id,
+                            )
+
+                    defaults = {
+                        'title': item.get('title', '').strip() or 'Untitled Task',
+                        'description': item.get('notes', ''),
+                        'status': (
+                            'completed'
+                            if item.get('status') == 'completed'
+                            else 'todo'
+                        ),
+                        'due_date': due_date,
+                    }
+
+                    task, created = Task.objects.update_or_create(
                         owner=self.user,
-                        google_task_id=gt_id,
-                        title=title,
-                        description=notes,
-                        status=status,
+                        google_task_id=google_id,
+                        defaults=defaults,
                     )
-                    created_count += 1
+
+                    if created:
+                        created_count += 1
+                    else:
+                        updated_count += 1
+
+                    synced_count += 1
+
+                page_token = response.get('nextPageToken')
+                if not page_token:
+                    break
 
             return {
-                'synced': len(items),
+                'synced': synced_count,
                 'created': created_count,
                 'updated': updated_count,
                 'connected': True,
             }
-        except Exception as exc:
-            logger.warning("Failed to pull Google Tasks: %s", exc)
-            return {'synced': 0, 'created': 0, 'updated': 0, 'connected': False, 'error': str(exc)}
+
+        except Exception:
+            logger.exception('Failed to sync Google Tasks')
+            return {
+                'synced': 0,
+                'created': 0,
+                'updated': 0,
+                'connected': False,
+                'error': 'Google Tasks synchronization failed.',
+            }

@@ -48,10 +48,7 @@ export const TasksPage: React.FC = () => {
     setTasks([]);
 
     try {
-      // 1. Sync tasks from Google into the website database.
       await tasksApi.syncGoogleTasks();
-
-      // 2. Fetch the updated tasks from the website backend.
       const response = await tasksApi.listTasks();
 
       if (Array.isArray(response?.data)) {

@@ -34,10 +34,19 @@ class SheetsService:
             self.drive.files()
             .list(
                 q="mimeType='application/vnd.google-apps.spreadsheet'",
-                fields="files(id,name,createdTime,modifiedTime)",
+                fields="files(id,name,createdTime,modifiedTime,webViewLink)",
                 pageSize=page_size,
             )
             .execute()
+        )
+
+    def export_spreadsheet(self, spreadsheet_id, mime_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"):
+        """
+        Export a Google Spreadsheet to Microsoft Excel (.xlsx) or CSV.
+        """
+        return self.drive.files().export(
+            fileId=spreadsheet_id,
+            mimeType=mime_type,
         )
 
     def get_values(self, spreadsheet_id, range_name):

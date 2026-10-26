@@ -16,6 +16,18 @@ export const tasksApi = {
     const data = await apiFetch<WorkspaceTask[]>('/api/tasks/');
     return { data, source: 'live' };
   },
+  async syncTasks(): Promise<{
+    synced: number;
+    created: number;
+    updated: number;
+    connected: boolean;
+    error?: string;
+  }> {
+    return await apiFetch('/api/tasks/sync/', {
+      method: 'POST',
+    });
+  },
+
 
   async createTask(input: TaskCreateInput): Promise<WorkspaceTask> {
     return await apiFetch<WorkspaceTask>('/api/tasks/', {

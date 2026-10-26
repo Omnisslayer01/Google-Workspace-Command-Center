@@ -23,6 +23,7 @@ export const sheetsApi = {
       title: f.name || 'Untitled Spreadsheet',
       lastModified:
         f.modifiedTime || new Date().toISOString(),
+      webViewLink: f.webViewLink || `https://docs.google.com/spreadsheets/d/${f.id}/edit`,
       worksheets: [],
     }));
 
@@ -177,6 +178,7 @@ export const sheetsApi = {
           response.properties?.title ||
           'Unknown Spreadsheet',
         lastModified: new Date().toISOString(),
+        webViewLink: `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`,
         worksheets,
       };
     } catch (error) {
@@ -208,6 +210,60 @@ export const sheetsApi = {
         (worksheet) => worksheet.id === worksheetId
       ) || null
     );
+  },
+
+  /**
+   * Download the Google Spreadsheet as an Excel (.xlsx) file.
+   */
+  async downloadExcel(spreadsheetId: string, filename = 'spreadsheet.xlsx'): Promise<void> {
+    const accessToken = localStorage.getItem('access_token');
+    const response = await fetch(`/api/sheets/${spreadsheetId}/export/?format=xlsx`, {
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+    });
+
+    if (!response.ok) {
+      // Fallback: direct Google export URL if direct backend fails
+      window.open(`https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=xlsx`, '_blank');
+      return;
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename.endsWith('.xlsx') ? filename : `${filename}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  },
+
+  /**
+   * Export worksheet data as CSV file.
+   */
+  exportCsv(worksheet: WorksheetItem, filename = 'worksheet.csv'): void {
+    if (!worksheet || !worksheet.columns || worksheet.columns.length === 0) return;
+
+    const headers = worksheet.columns.map((c) => `"${c.label.replace(/"/g, '""')}"`).join(',');
+    const rows = (worksheet.records || []).map((row) =>
+      worksheet.columns
+        .map((c) => {
+          const val = row[c.key] ?? '';
+          return `"${String(val).replace(/"/g, '""')}"`;
+        })
+        .join(',')
+    );
+
+    const csvContent = [headers, ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename.endsWith('.csv') ? filename : `${filename}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
   },
 };
 

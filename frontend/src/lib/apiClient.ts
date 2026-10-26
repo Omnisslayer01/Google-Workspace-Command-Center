@@ -448,50 +448,31 @@ export async function apiFetch<T>(
     response.headers.get(
       'content-type'
     ) || '';
-
   const lowerContentType =
     contentType.toLowerCase();
 
+  // Drive downloads must always remain Blob responses,
+  // including text/plain and text/csv files.
   if (
-    lowerContentType.includes(
-      'application/octet-stream'
-    ) ||
-    lowerContentType.includes(
-      'application/pdf'
-    ) ||
-    lowerContentType.includes(
-      'application/zip'
-    ) ||
-    lowerContentType.includes(
-      'application/vnd'
-    ) ||
-    lowerContentType.startsWith(
-      'image/'
-    ) ||
-    lowerContentType.startsWith(
-      'video/'
-    ) ||
-    lowerContentType.startsWith(
-      'audio/'
-    )
+    cleanEndpoint.includes('/api/drive/files/') &&
+    cleanEndpoint.includes('/download/')
   ) {
-    return (
-      await response.blob()
-    ) as T;
+    return (await response.blob()) as T;
   }
 
-  /**
-   * Normal JSON response.
-   */
+  // Handle other binary/file responses.
   if (
-    lowerContentType.includes(
-      'application/json'
-    )
+    lowerContentType.includes('application/octet-stream') ||
+    lowerContentType.includes('application/pdf') ||
+    lowerContentType.includes('application/zip') ||
+    lowerContentType.includes('application/vnd') ||
+    lowerContentType.startsWith('image/') ||
+    lowerContentType.startsWith('video/') ||
+    lowerContentType.startsWith('audio/')
   ) {
-    return (
-      await response.json()
-    ) as T;
+    return (await response.blob()) as T;
   }
+
 
   /**
    * Fallback for responses where Django
