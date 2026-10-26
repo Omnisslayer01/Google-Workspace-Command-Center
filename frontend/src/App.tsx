@@ -1,5 +1,4 @@
 import React, { useEffect } from "react";
-import { AuditActivityLogPage } from "./pages/AuditActivityLogPage";
 import {
   BrowserRouter,
   Routes,
@@ -20,7 +19,6 @@ import { DrivePage } from "./pages/DrivePage";
 import { AutomationsPage } from "./pages/AutomationsPage";
 import { AutomationBuilderPage } from "./pages/AutomationBuilderPage";
 import { AutomationExecutionHistoryPage } from "./pages/AutomationExecutionHistoryPage";
-import  OrganizationAdminPage  from "./pages/OrganizationAdminPage";
 
 
 
@@ -118,23 +116,6 @@ export const App: React.FC = () => {
           }
         />
 
-        <Route
-          path="/audit"
-          element={
-            <ProtectedRoute>
-              <AuditActivityLogPage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-  path="/organization"
-  element={
-    <ProtectedRoute>
-      <OrganizationAdminPage />
-    </ProtectedRoute>
-  }
-/>
 
         <Route
   path="/gmail"

@@ -18,7 +18,6 @@ import { RecentDriveFilesCard } from '../components/dashboard/RecentDriveFilesCa
 import { PendingTasksCard } from '../components/dashboard/PendingTasksCard';
 import { SheetsSummaryCard } from '../components/dashboard/SheetsSummaryCard';
 import { AutomationActivityCard } from '../components/dashboard/AutomationActivityCard';
-import { AuditActivityFeed } from '../components/dashboard/AuditActivityFeed';
 
 import { calendarApi } from '../lib/calendarApi';
 import { tasksApi } from '../lib/tasksApi';
@@ -43,8 +42,7 @@ type WidgetId =
   | 'tasks'
   | 'drive'
   | 'sheets'
-  | 'automation'
-  | 'audit';
+  | 'automation';
 
 const ALL_WIDGETS: { id: WidgetId; label: string }[] = [
   { id: 'schedule', label: 'Today\'s Schedule' },
@@ -52,7 +50,6 @@ const ALL_WIDGETS: { id: WidgetId; label: string }[] = [
   { id: 'drive', label: 'Recent Drive Files' },
   { id: 'sheets', label: 'Sheets Summary' },
   { id: 'automation', label: 'Automation Workflows' },
-  { id: 'audit', label: 'Recent Audit Activity' },
 ];
 
 const WIDGET_STORAGE_KEY = 'gwcc_dashboard_widgets';
@@ -62,7 +59,10 @@ function loadWidgetPrefs(): WidgetId[] {
     const stored = localStorage.getItem(WIDGET_STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const valid = parsed.filter((w: any) => ALL_WIDGETS.some((aw) => aw.id === w));
+        if (valid.length > 0) return valid;
+      }
     }
   } catch { /* use default */ }
   return ALL_WIDGETS.map((w) => w.id);
@@ -448,36 +448,20 @@ export const Dashboard: React.FC = () => {
         )}
 
 
-        {/* AUTOMATION + AUDIT */}
-        {(isWidgetActive('automation') || isWidgetActive('audit')) && (
-          <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {isWidgetActive('automation') && (
-              <div className="lg:col-span-6 relative group">
-                <button
-                  type="button"
-                  onClick={() => removeWidget('automation')}
-                  className="absolute top-2 right-2 z-10 p-1 rounded-full bg-white border border-slate-200 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
-                  title="Remove widget"
-                >
-                  <X className="w-3 h-3 text-slate-400" />
-                </button>
-                <AutomationActivityCard />
-              </div>
-            )}
-
-            {isWidgetActive('audit') && (
-              <div className="lg:col-span-6 relative group">
-                <button
-                  type="button"
-                  onClick={() => removeWidget('audit')}
-                  className="absolute top-2 right-2 z-10 p-1 rounded-full bg-white border border-slate-200 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
-                  title="Remove widget"
-                >
-                  <X className="w-3 h-3 text-slate-400" />
-                </button>
-                <AuditActivityFeed />
-              </div>
-            )}
+        {/* AUTOMATION */}
+        {isWidgetActive('automation') && (
+          <section className="grid grid-cols-1 gap-6">
+            <div className="relative group">
+              <button
+                type="button"
+                onClick={() => removeWidget('automation')}
+                className="absolute top-2 right-2 z-10 p-1 rounded-full bg-white border border-slate-200 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
+                title="Remove widget"
+              >
+                <X className="w-3 h-3 text-slate-400" />
+              </button>
+              <AutomationActivityCard />
+            </div>
           </section>
         )}
 

@@ -11,11 +11,9 @@ import {
   HardDrive,
   Zap,
   History,
-  Activity,
   LogOut,
   User,
   ChevronDown,
-  Users,
   Bell,
 } from 'lucide-react';
 
@@ -92,16 +90,6 @@ export const Header: React.FC<HeaderProps> = () => {
       to: '/automations/history',
       label: 'History',
       icon: History,
-    },
-    {
-      to: '/audit',
-      label: 'Audit Log',
-      icon: Activity,
-    },
-    {
-      to: '/organization',
-      label: 'Team Admin',
-      icon: Users,
     },
   ];
 
