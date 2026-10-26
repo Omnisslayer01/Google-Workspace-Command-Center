@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Zap, Loader2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Zap, Loader2, ArrowRight } from 'lucide-react';
 import { apiFetch } from '../../lib/apiClient';
 
 interface AutomationItem {
@@ -19,7 +20,6 @@ export const AutomationActivityCard: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        // The automation API may not have a list endpoint; try it
         const response = await apiFetch<any>('/api/automations/');
         const items = Array.isArray(response)
           ? response
@@ -28,7 +28,6 @@ export const AutomationActivityCard: React.FC = () => {
           : [];
         setAutomations(items);
       } catch (err: any) {
-        // If there's no list endpoint or auth error, show empty
         setError(err?.message || 'Could not load automations');
         setAutomations([]);
       } finally {
@@ -39,7 +38,7 @@ export const AutomationActivityCard: React.FC = () => {
   }, []);
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-2xs relative overflow-hidden flex flex-col justify-between">
+    <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-2xs relative overflow-hidden flex flex-col justify-between h-full">
       {/* Top Red hairline (Gmail/Ingestion accent) */}
       <div className="absolute top-0 left-0 right-0 h-1 bg-[#EA4335]" />
 
@@ -51,18 +50,25 @@ export const AutomationActivityCard: React.FC = () => {
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-900 tracking-tight">Automation Workflows</h3>
-              <p className="text-xs text-slate-500">Cross-service event pipeline status</p>
+              <p className="text-xs text-slate-500">Continuous background pipelines</p>
             </div>
           </div>
+          <Link
+            to="/automations"
+            className="text-xs font-semibold text-[#EA4335] hover:text-[#d93025] flex items-center gap-1 transition-colors group"
+          >
+            <span>All Workflows</span>
+            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+          </Link>
         </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-8 text-slate-400 text-sm gap-2">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span>Loading automations...</span>
+            <Loader2 className="w-4 h-4 animate-spin text-[#EA4335]" />
+            <span className="text-xs">Loading background workflows...</span>
           </div>
         ) : error ? (
-          <div className="text-center py-8 text-sm text-amber-600">
+          <div className="text-center py-8 text-xs text-amber-600">
             {error}
           </div>
         ) : automations.length === 0 ? (
@@ -70,35 +76,39 @@ export const AutomationActivityCard: React.FC = () => {
             <Zap className="w-8 h-8 mx-auto mb-2 text-slate-300" />
             <p className="text-sm font-medium text-slate-500">No automation workflows yet</p>
             <p className="text-xs text-slate-400 mt-1">
-              Create an automation to see it here.
+              Create an automation to run tasks in the background.
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {automations.map((wf) => (
+          <div className="space-y-2.5">
+            {automations.slice(0, 4).map((wf) => (
               <div
                 key={wf.id}
-                className="p-3.5 rounded-lg border border-slate-100 hover:border-slate-200 bg-slate-50/50 transition-all"
+                className="p-3 rounded-lg border border-slate-100 hover:border-slate-200 bg-slate-50/50 transition-all flex items-center justify-between gap-3"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-slate-900">{wf.name}</span>
-                      <span
-                        className={`text-[10px] font-semibold px-2 py-0.2 rounded border ${
-                          wf.is_active
-                            ? 'bg-emerald-50 text-[#0f9d58] border-emerald-200'
-                            : 'bg-slate-100 text-slate-600 border-slate-200'
-                        }`}
-                      >
-                        {wf.is_active ? 'ACTIVE' : 'PAUSED'}
-                      </span>
-                    </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-slate-900 truncate">{wf.name}</span>
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-0.5 font-mono">
+                    Created {new Date(wf.created_at).toLocaleDateString()}
                   </div>
                 </div>
-                <div className="mt-2 pt-2 border-t border-slate-200/60 text-[11px] text-slate-500 font-mono">
-                  Created: {new Date(wf.created_at).toLocaleDateString()}
-                </div>
+
+                <span
+                  className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full border shrink-0 flex items-center gap-1.5 ${
+                    wf.is_active
+                      ? 'bg-emerald-50 text-[#0f9d58] border-emerald-200'
+                      : 'bg-slate-100 text-slate-500 border-slate-200'
+                  }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      wf.is_active ? 'bg-[#34A853] animate-pulse' : 'bg-slate-400'
+                    }`}
+                  />
+                  <span>{wf.is_active ? 'RUNNING' : 'PAUSED'}</span>
+                </span>
               </div>
             ))}
           </div>
@@ -106,9 +116,13 @@ export const AutomationActivityCard: React.FC = () => {
       </div>
 
       <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-        <span>{automations.length} workflow{automations.length !== 1 ? 's' : ''}</span>
-        <span className="font-mono text-[11px] text-slate-600">Automation Engine</span>
+        <span>{automations.length} active background task{automations.length !== 1 ? 's' : ''}</span>
+        <Link to="/automations" className="text-[11px] text-[#EA4335] font-medium hover:underline">
+          Manage pipelines →
+        </Link>
       </div>
     </div>
   );
 };
+
+export default AutomationActivityCard;

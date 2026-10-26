@@ -17,7 +17,13 @@ class TaskAPITests(APITestCase):
         response = self.client.get(self.list_url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_create_and_list_tasks_authenticated(self):
+    @patch('tasks.views.GoogleTasksService')
+    def test_create_and_list_tasks_authenticated(self, mock_tasks_service):
+        mock_instance = MagicMock()
+        mock_instance.is_connected.return_value = True
+        mock_instance.push_create.return_value = 'mock_google_id_123'
+        mock_tasks_service.return_value = mock_instance
+
         self.client.force_authenticate(user=self.user_a)
 
         payload = {

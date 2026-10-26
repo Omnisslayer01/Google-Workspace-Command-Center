@@ -3,11 +3,11 @@ import {
   Mail,
   CalendarDays,
   HardDrive,
-  CheckSquare,
   RefreshCw,
   Plus,
   X,
   AlertTriangle,
+  Table,
 } from 'lucide-react';
 
 import { Header } from '../components/common/Header';
@@ -18,11 +18,13 @@ import { RecentDriveFilesCard } from '../components/dashboard/RecentDriveFilesCa
 import { PendingTasksCard } from '../components/dashboard/PendingTasksCard';
 import { SheetsSummaryCard } from '../components/dashboard/SheetsSummaryCard';
 import { AutomationActivityCard } from '../components/dashboard/AutomationActivityCard';
+import { RecentEmailsCard } from '../components/dashboard/RecentEmailsCard';
 
 import { calendarApi } from '../lib/calendarApi';
 import { tasksApi } from '../lib/tasksApi';
 import { sheetsApi } from '../lib/sheetsApi';
 import { listDriveFiles } from '../lib/driveApi';
+import { listGmailMessages } from '../lib/gmailApi';
 
 import {
   CalendarEvent,
@@ -30,6 +32,7 @@ import {
   SpreadsheetItem,
   DriveFileItem,
 } from '../types';
+import type { GmailMessageStub } from '../types/gmail';
 
 import { ApiAuthError } from '../lib/apiClient';
 
@@ -42,17 +45,19 @@ type WidgetId =
   | 'tasks'
   | 'drive'
   | 'sheets'
+  | 'gmail'
   | 'automation';
 
 const ALL_WIDGETS: { id: WidgetId; label: string }[] = [
-  { id: 'schedule', label: 'Today\'s Schedule' },
+  { id: 'schedule', label: "Today's Schedule" },
   { id: 'tasks', label: 'Pending Tasks' },
   { id: 'drive', label: 'Recent Drive Files' },
   { id: 'sheets', label: 'Sheets Summary' },
+  { id: 'gmail', label: 'Recent Emails' },
   { id: 'automation', label: 'Automation Workflows' },
 ];
 
-const WIDGET_STORAGE_KEY = 'gwcc_dashboard_widgets';
+const WIDGET_STORAGE_KEY = 'gwcc_dashboard_widgets_v2';
 
 function loadWidgetPrefs(): WidgetId[] {
   try {
@@ -60,11 +65,16 @@ function loadWidgetPrefs(): WidgetId[] {
     if (stored) {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        const valid = parsed.filter((w: any) => ALL_WIDGETS.some((aw) => aw.id === w));
+        // filter out any old removed widgets (like 'audit')
+        const valid = parsed.filter((id) =>
+          ALL_WIDGETS.some((w) => w.id === id)
+        ) as WidgetId[];
         if (valid.length > 0) return valid;
       }
     }
-  } catch { /* use default */ }
+  } catch {
+    /* use default */
+  }
   return ALL_WIDGETS.map((w) => w.id);
 }
 
@@ -72,13 +82,14 @@ function saveWidgetPrefs(widgets: WidgetId[]) {
   localStorage.setItem(WIDGET_STORAGE_KEY, JSON.stringify(widgets));
 }
 
-
 export const Dashboard: React.FC = () => {
   /* ── data state ── */
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [tasks, setTasks] = useState<WorkspaceTask[]>([]);
   const [sheets, setSheets] = useState<SpreadsheetItem[]>([]);
   const [driveFiles, setDriveFiles] = useState<DriveFileItem[]>([]);
+  const [gmailMessages, setGmailMessages] = useState<GmailMessageStub[]>([]);
+  const [gmailEstimate, setGmailEstimate] = useState<number | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -89,6 +100,7 @@ export const Dashboard: React.FC = () => {
   const [tasksError, setTasksError] = useState<string | null>(null);
   const [driveError, setDriveError] = useState<string | null>(null);
   const [sheetsError, setSheetsError] = useState<string | null>(null);
+  const [gmailError, setGmailError] = useState<string | null>(null);
 
   /* ── widget management ── */
   const [activeWidgets, setActiveWidgets] = useState<WidgetId[]>(loadWidgetPrefs);
@@ -112,14 +124,12 @@ export const Dashboard: React.FC = () => {
     });
   };
 
-
   const normalizeArray = <T,>(value: any): T[] => {
     if (Array.isArray(value)) return value;
     if (Array.isArray(value?.results)) return value.results;
     if (Array.isArray(value?.data)) return value.data;
     return [];
   };
-
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -128,6 +138,7 @@ export const Dashboard: React.FC = () => {
     setTasksError(null);
     setDriveError(null);
     setSheetsError(null);
+    setGmailError(null);
 
     // 1. CALENDAR
     try {
@@ -169,14 +180,22 @@ export const Dashboard: React.FC = () => {
       setDriveFiles([]);
     }
 
+    // 5. GMAIL
+    try {
+      const result = await listGmailMessages({ max_results: 10 });
+      setGmailMessages(result?.messages || []);
+      setGmailEstimate(result?.result_size_estimate ?? null);
+    } catch (err: any) {
+      setGmailError(err?.message || 'Gmail unavailable');
+      setGmailMessages([]);
+    }
+
     setLoading(false);
   }, []);
-
 
   useEffect(() => {
     loadData();
   }, [loadData]);
-
 
   const handleToggleTask = async (id: string) => {
     try {
@@ -189,25 +208,13 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-
-  const pendingTasksCount = tasks.filter(
-    (t) => t.status !== 'completed'
-  ).length;
-
-  const completedTasksCount = tasks.filter(
-    (t) => t.status === 'completed'
-  ).length;
-
   const isWidgetActive = (id: WidgetId) => activeWidgets.includes(id);
-
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col selection:bg-[#4285F4] selection:text-white">
-
       <Header />
 
       <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-
         {/* PAGE HEADER */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200 pb-6">
           <div>
@@ -239,7 +246,7 @@ export const Dashboard: React.FC = () => {
               className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 shadow-2xs transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Add Widget</span>
+              <span>Customize Widgets</span>
             </button>
 
             <button
@@ -302,12 +309,30 @@ export const Dashboard: React.FC = () => {
           />
         </section>
 
-
-        {/* METRICS - now real data */}
+        {/* METRICS - Real live data including Gmail */}
+        {/* METRICS - 4 Core Google Workspace Services in Perfect 4-Column Symmetry */}
         <section
           aria-label="Command Center Metrics"
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
         >
+          {/* Gmail */}
+          <MetricCard
+            label="Gmail Inbox"
+            value={
+              loading
+                ? '...'
+                : gmailEstimate !== null
+                ? `${gmailEstimate} Emails`
+                : `${gmailMessages.length} Emails`
+            }
+            change={gmailError ? 'Unavailable' : 'Live'}
+            changeType={gmailError ? 'negative' : 'positive'}
+            subtext={gmailError || 'From Gmail Inbox'}
+            icon={Mail}
+            topColor="#EA4335"
+          />
+
+          {/* Calendar */}
           <MetricCard
             label="Calendar Events"
             value={loading ? '...' : `${events.length} Events`}
@@ -318,6 +343,7 @@ export const Dashboard: React.FC = () => {
             topColor="#4285F4"
           />
 
+          {/* Drive Files */}
           <MetricCard
             label="Drive Files"
             value={loading ? '...' : `${driveFiles.length} Files`}
@@ -328,33 +354,23 @@ export const Dashboard: React.FC = () => {
             topColor="#FBBC04"
           />
 
-          <MetricCard
-            label="Pending Tasks"
-            value={loading ? '...' : `${pendingTasksCount} Action Items`}
-            change={`${completedTasksCount} Done`}
-            changeType="neutral"
-            subtext={tasksError || 'Cross-service operational queue'}
-            icon={CheckSquare}
-            topColor="#34A853"
-          />
-
+          {/* Sheets */}
           <MetricCard
             label="Spreadsheets"
             value={loading ? '...' : `${sheets.length} Sheets`}
             change={sheetsError ? 'Unavailable' : 'Live'}
             changeType={sheetsError ? 'negative' : 'positive'}
             subtext={sheetsError || 'From Google Sheets'}
-            icon={Mail}
-            topColor="#EA4335"
+            icon={Table}
+            topColor="#34A853"
           />
         </section>
 
-
-        {/* SCHEDULE + TASKS */}
+        {/* ROW 1: SCHEDULE + TASKS (Perfect 2-column alignment) */}
         {(isWidgetActive('schedule') || isWidgetActive('tasks')) && (
-          <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+          <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
             {isWidgetActive('schedule') && (
-              <div className={`${isWidgetActive('tasks') ? 'lg:col-span-7' : 'lg:col-span-12'} relative group flex flex-col h-full`}>
+              <div className={`${isWidgetActive('tasks') ? 'col-span-1' : 'lg:col-span-2'} relative group flex flex-col h-full`}>
                 <button
                   type="button"
                   onClick={() => removeWidget('schedule')}
@@ -377,7 +393,7 @@ export const Dashboard: React.FC = () => {
             )}
 
             {isWidgetActive('tasks') && (
-              <div className={`${isWidgetActive('schedule') ? 'lg:col-span-5' : 'lg:col-span-12'} relative group flex flex-col h-full`}>
+              <div className={`${isWidgetActive('schedule') ? 'col-span-1' : 'lg:col-span-2'} relative group flex flex-col h-full`}>
                 <button
                   type="button"
                   onClick={() => removeWidget('tasks')}
@@ -404,12 +420,11 @@ export const Dashboard: React.FC = () => {
           </section>
         )}
 
-
-        {/* DRIVE + SHEETS */}
+        {/* ROW 2: DRIVE + SHEETS (Perfect 2-column alignment) */}
         {(isWidgetActive('drive') || isWidgetActive('sheets')) && (
-          <section className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
             {isWidgetActive('drive') && (
-              <div className="lg:col-span-6 relative group">
+              <div className={`${isWidgetActive('sheets') ? 'col-span-1' : 'lg:col-span-2'} relative group flex flex-col h-full`}>
                 <button
                   type="button"
                   onClick={() => removeWidget('drive')}
@@ -419,7 +434,7 @@ export const Dashboard: React.FC = () => {
                   <X className="w-3 h-3 text-slate-400" />
                 </button>
                 {driveError ? (
-                  <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-2xs">
+                  <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-2xs h-full flex items-center">
                     <div className="flex items-center gap-2 text-amber-600 text-sm">
                       <AlertTriangle className="w-4 h-4" />
                       <span>{driveError}</span>
@@ -432,7 +447,7 @@ export const Dashboard: React.FC = () => {
             )}
 
             {isWidgetActive('sheets') && (
-              <div className="lg:col-span-6 relative group">
+              <div className={`${isWidgetActive('drive') ? 'col-span-1' : 'lg:col-span-2'} relative group flex flex-col h-full`}>
                 <button
                   type="button"
                   onClick={() => removeWidget('sheets')}
@@ -447,26 +462,44 @@ export const Dashboard: React.FC = () => {
           </section>
         )}
 
+        {/* ROW 3: GMAIL + AUTOMATION (Replaces audit log, perfect 2-column alignment) */}
+        {(isWidgetActive('gmail') || isWidgetActive('automation')) && (
+          <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+            {isWidgetActive('gmail') && (
+              <div className={`${isWidgetActive('automation') ? 'col-span-1' : 'lg:col-span-2'} relative group flex flex-col h-full`}>
+                <button
+                  type="button"
+                  onClick={() => removeWidget('gmail')}
+                  className="absolute top-2 right-2 z-10 p-1 rounded-full bg-white border border-slate-200 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
+                  title="Remove widget"
+                >
+                  <X className="w-3 h-3 text-slate-400" />
+                </button>
+                <RecentEmailsCard
+                  messages={gmailMessages}
+                  loading={loading}
+                  error={gmailError}
+                  totalEstimate={gmailEstimate}
+                />
+              </div>
+            )}
 
-        {/* AUTOMATION */}
-        {isWidgetActive('automation') && (
-          <section className="grid grid-cols-1 gap-6">
-            <div className="relative group">
-              <button
-                type="button"
-                onClick={() => removeWidget('automation')}
-                className="absolute top-2 right-2 z-10 p-1 rounded-full bg-white border border-slate-200 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
-                title="Remove widget"
-              >
-                <X className="w-3 h-3 text-slate-400" />
-              </button>
-              <AutomationActivityCard />
-            </div>
+            {isWidgetActive('automation') && (
+              <div className={`${isWidgetActive('gmail') ? 'col-span-1' : 'lg:col-span-2'} relative group flex flex-col h-full`}>
+                <button
+                  type="button"
+                  onClick={() => removeWidget('automation')}
+                  className="absolute top-2 right-2 z-10 p-1 rounded-full bg-white border border-slate-200 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
+                  title="Remove widget"
+                >
+                  <X className="w-3 h-3 text-slate-400" />
+                </button>
+                <AutomationActivityCard />
+              </div>
+            )}
           </section>
         )}
-
       </main>
-
 
       <footer className="border-t border-slate-200 bg-white py-6 mt-12">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
@@ -479,11 +512,10 @@ export const Dashboard: React.FC = () => {
           <div className="flex items-center gap-4 font-mono text-[11px]">
             <span>OAuth 2.0 Scopes Active</span>
             <span>•</span>
-            <span>Branch: integration</span>
+            <span>Gmail • Calendar • Drive • Sheets</span>
           </div>
         </div>
       </footer>
-
     </div>
   );
 };

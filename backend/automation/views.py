@@ -33,6 +33,27 @@ class AutomationCreateView(APIView):
 
         automation = serializer.save()
 
+        # Immediately enqueue background Celery polling if automation is active
+        if automation.is_active and hasattr(automation, "trigger") and automation.trigger:
+            try:
+                from .tasks import (
+                    poll_gmail_triggers,
+                    poll_calendar_triggers,
+                    poll_drive_triggers,
+                    check_scheduled_triggers,
+                )
+                trigger_type = automation.trigger.type
+                if trigger_type in ("gmail_new", "gmail_search"):
+                    poll_gmail_triggers.delay()
+                elif trigger_type in ("calendar_new", "calendar_upcoming"):
+                    poll_calendar_triggers.delay()
+                elif trigger_type == "drive_new":
+                    poll_drive_triggers.delay()
+                elif trigger_type == "scheduled":
+                    check_scheduled_triggers.delay()
+            except Exception:
+                pass
+
         return Response(
             {
                 "message": "Automation created successfully.",
@@ -116,7 +137,12 @@ class AutomationRunView(APIView):
             if isinstance(request.data, dict)
             else {}
         )
-        execution = AutomationExecutor(execution, trigger_payload).run()
+        try:
+            from .tasks import run_automation
+            run_automation.delay(execution.id, trigger_payload)
+            execution.refresh_from_db()
+        except Exception:
+            execution = AutomationExecutor(execution, trigger_payload).run()
 
         return Response(
             {

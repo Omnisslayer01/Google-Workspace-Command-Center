@@ -116,6 +116,19 @@ export const App: React.FC = () => {
           }
         />
 
+        <Route
+          path="/audit"
+          element={<Navigate to="/automations/history" replace />}
+        />
+
+        <Route
+  path="/organization"
+  element={
+    <ProtectedRoute>
+      <OrganizationAdminPage />
+    </ProtectedRoute>
+  }
+/>
 
         <Route
   path="/gmail"

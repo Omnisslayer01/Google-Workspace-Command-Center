@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Header } from '../components/common/Header';
 import { SpreadsheetSelector } from '../components/sheets/SpreadsheetSelector';
-import { SheetCharts } from '../components/sheets/SheetCharts';
 import { SheetDataTable } from '../components/sheets/SheetDataTable';
 import { ExcelSpreadsheetView } from '../components/sheets/ExcelSpreadsheetView';
 import { MetricCard } from '../components/common/MetricCard';

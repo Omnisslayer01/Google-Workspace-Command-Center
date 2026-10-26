@@ -91,6 +91,11 @@ export const Header: React.FC<HeaderProps> = () => {
       label: 'History',
       icon: History,
     },
+    {
+      to: '/organization',
+      label: 'Team Admin',
+      icon: Users,
+    },
   ];
 
   return (
