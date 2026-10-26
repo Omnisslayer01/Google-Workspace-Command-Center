@@ -4,20 +4,19 @@ import {
   Zap,
   Plus,
   History,
-  Play,
   Trash2,
   RefreshCw,
   CheckCircle2,
   AlertCircle,
   Loader2,
   ArrowRight,
-  Power,
+  Pause,
+  Play,
 } from 'lucide-react';
 
 import { Header } from '../components/common/Header';
 import {
   getAutomations,
-  runAutomation,
   toggleAutomation,
   deleteAutomation,
   type AutomationItem,
@@ -29,8 +28,8 @@ const TRIGGER_NAMES: Record<string, string> = {
   calendar_new: 'New Calendar Event',
   calendar_upcoming: 'Upcoming Calendar Event',
   drive_new: 'New Drive File',
-  scheduled: 'Scheduled Cron',
-  manual: 'Manual Trigger',
+  scheduled: 'Scheduled Interval',
+  manual: 'Background Workflow',
 };
 
 const ACTION_NAMES: Record<string, string> = {
@@ -50,8 +49,8 @@ export const AutomationsPage: React.FC = () => {
   const [automations, setAutomations] = useState<AutomationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<number | null>(null);
 
-  const [runningId, setRunningId] = useState<number | null>(null);
   const [actionMessage, setActionMessage] = useState<{
     type: 'success' | 'error';
     text: string;
@@ -76,36 +75,26 @@ export const AutomationsPage: React.FC = () => {
     fetchAutomations();
   }, [fetchAutomations]);
 
-  const handleRun = async (id: number, name: string) => {
-    setRunningId(id);
-    setActionMessage(null);
-    try {
-      const res = await runAutomation(id);
-      setActionMessage({
-        type: 'success',
-        text: `Execution #${res.execution_id} triggered for "${name}" (Status: ${res.status}).`,
-      });
-    } catch (err: any) {
-      setActionMessage({
-        type: 'error',
-        text: err?.message || `Failed to run automation "${name}".`,
-      });
-    } finally {
-      setRunningId(null);
-    }
-  };
-
-  const handleToggle = async (id: number, currentStatus: boolean) => {
+  const handleToggle = async (id: number, currentStatus: boolean, name: string) => {
+    setTogglingId(id);
     try {
       const updated = await toggleAutomation(id, !currentStatus);
       setAutomations((prev) =>
         prev.map((a) => (a.id === id ? { ...a, is_active: updated.is_active } : a))
       );
+      setActionMessage({
+        type: 'success',
+        text: updated.is_active
+          ? `Automation "${name}" resumed and running in background.`
+          : `Automation "${name}" paused.`,
+      });
     } catch (err: any) {
       setActionMessage({
         type: 'error',
         text: err?.message || 'Failed to update automation status.',
       });
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -138,18 +127,18 @@ export const AutomationsPage: React.FC = () => {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#EA4335] font-mono">
-                Event Pipelines & Workflows
+                Continuous Background Orchestration
               </span>
               <span className="text-slate-300">•</span>
               <span className="text-xs text-slate-500 font-mono">
-                Automation Engine
+                Real-time Event Engine
               </span>
             </div>
             <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
               Automations
             </h1>
             <p className="mt-1 text-sm text-slate-500 max-w-2xl">
-              Build and manage triggers, conditional logic, and multi-service Google Workspace actions.
+              Workflows run continuously in the background without manual intervention. Trigger on incoming emails, calendar updates, drive uploads, and scheduled checks.
             </p>
           </div>
 
@@ -212,7 +201,7 @@ export const AutomationsPage: React.FC = () => {
         {loading && (
           <div className="bg-white border border-slate-200 rounded-xl p-12 text-center flex flex-col items-center justify-center space-y-3">
             <Loader2 className="w-8 h-8 text-[#EA4335] animate-spin" />
-            <p className="text-sm text-slate-500 font-medium">Loading your automations...</p>
+            <p className="text-sm text-slate-500 font-medium">Loading background automations...</p>
           </div>
         )}
 
@@ -239,9 +228,9 @@ export const AutomationsPage: React.FC = () => {
               <Zap className="w-7 h-7" />
             </div>
             <div className="space-y-1">
-              <h3 className="text-lg font-bold text-slate-900">No Automation Workflows Yet</h3>
+              <h3 className="text-lg font-bold text-slate-900">No Background Automations Yet</h3>
               <p className="text-sm text-slate-500 max-w-md mx-auto">
-                Automate repetitive tasks across Gmail, Calendar, Drive, Sheets, and pending tasks with custom triggers and conditions.
+                Create background workflows that continuously monitor Gmail, Calendar, Drive, and Sheets to run actions automatically.
               </p>
             </div>
             <button
@@ -261,7 +250,7 @@ export const AutomationsPage: React.FC = () => {
             {automations.map((auto) => {
               const triggerLabel =
                 TRIGGER_NAMES[auto.trigger?.type] || auto.trigger?.type || 'Trigger';
-              const isRunning = runningId === auto.id;
+              const isToggling = togglingId === auto.id;
 
               return (
                 <div
@@ -281,25 +270,24 @@ export const AutomationsPage: React.FC = () => {
                         </p>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => handleToggle(auto.id, auto.is_active)}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-colors ${
-                          auto.is_active
-                            ? 'bg-emerald-50 text-[#0f9d58] border-emerald-200 hover:bg-emerald-100'
-                            : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'
-                        }`}
-                        title="Click to toggle active state"
-                      >
-                        <Power className="w-3 h-3" />
-                        <span>{auto.is_active ? 'ACTIVE' : 'PAUSED'}</span>
-                      </button>
+                      {/* Status indicator */}
+                      {auto.is_active ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-[#0f9d58] border border-emerald-200 shrink-0">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#34A853] animate-pulse" />
+                          <span>RUNNING</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600 border border-slate-200 shrink-0">
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                          <span>PAUSED</span>
+                        </span>
+                      )}
                     </div>
 
                     {/* Trigger */}
                     <div className="mb-3 p-2.5 rounded-lg bg-slate-50 border border-slate-100 text-xs">
                       <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                        Trigger
+                        Active Trigger
                       </div>
                       <div className="font-medium text-slate-800 flex items-center gap-1.5">
                         <Zap className="w-3.5 h-3.5 text-[#EA4335]" />
@@ -342,23 +330,40 @@ export const AutomationsPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Footer controls */}
+                  {/* Footer controls: Pause / Resume + History + Delete */}
                   <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleRun(auto.id, auto.name)}
-                        disabled={isRunning}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-[#4285F4] hover:bg-[#3367d6] rounded-lg transition-colors shadow-2xs disabled:opacity-50"
-                        title="Execute this automation now"
-                      >
-                        {isRunning ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <Play className="w-3.5 h-3.5" />
-                        )}
-                        <span>{isRunning ? 'Running...' : 'Run Now'}</span>
-                      </button>
+                      {auto.is_active ? (
+                        <button
+                          type="button"
+                          onClick={() => handleToggle(auto.id, auto.is_active, auto.name)}
+                          disabled={isToggling}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-amber-50 hover:border-amber-200 hover:text-amber-800 rounded-lg transition-colors shadow-2xs disabled:opacity-50"
+                          title="Pause background execution"
+                        >
+                          {isToggling ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Pause className="w-3.5 h-3.5 text-amber-600" />
+                          )}
+                          <span>Pause</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleToggle(auto.id, auto.is_active, auto.name)}
+                          disabled={isToggling}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors shadow-2xs disabled:opacity-50"
+                          title="Resume background execution"
+                        >
+                          {isToggling ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Play className="w-3.5 h-3.5 text-white" />
+                          )}
+                          <span>Resume</span>
+                        </button>
+                      )}
 
                       <Link
                         to="/automations/history"

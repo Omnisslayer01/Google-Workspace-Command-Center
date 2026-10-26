@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Header } from '../components/common/Header';
 import { SpreadsheetSelector } from '../components/sheets/SpreadsheetSelector';
-import { SheetCharts } from '../components/sheets/SheetCharts';
 import { SheetDataTable } from '../components/sheets/SheetDataTable';
-import { MetricCard } from '../components/common/MetricCard';
 import { sheetsApi } from '../lib/sheetsApi';
 import { SpreadsheetItem, WorksheetItem } from '../types';
-import { Table, RefreshCw, CheckCircle2, AlertTriangle, Loader2, FileSpreadsheet } from 'lucide-react';
+import { RefreshCw, CheckCircle2, AlertTriangle, Loader2, FileSpreadsheet } from 'lucide-react';
 
 export const SheetsPage: React.FC = () => {
   const [spreadsheets, setSpreadsheets] = useState<SpreadsheetItem[]>([]);
@@ -181,35 +179,9 @@ export const SheetsPage: React.FC = () => {
             )}
 
             {!loadingSheet && activeWorksheet && (
-              <>
-                {/* 2. Worksheet KPI Cards */}
-                {activeWorksheet.metrics && activeWorksheet.metrics.length > 0 && (
-                  <section aria-label="Worksheet Metrics" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {activeWorksheet.metrics.map((metric, idx) => (
-                      <MetricCard
-                        key={idx}
-                        label={metric.label}
-                        value={metric.value}
-                        change={metric.change}
-                        changeType={metric.changeType}
-                        subtext={metric.subtext}
-                        topColor="#34A853"
-                        icon={Table}
-                      />
-                    ))}
-                  </section>
-                )}
-
-                {/* 3. Visual Charts Section */}
-                <section aria-label="Worksheet Visual Charts">
-                  <SheetCharts worksheet={activeWorksheet} />
-                </section>
-
-                {/* 4. Tabular Data Records Table */}
-                <section aria-label="Worksheet Records Table">
-                  <SheetDataTable worksheet={activeWorksheet} />
-                </section>
-              </>
+              <section aria-label="Worksheet Records Table">
+                <SheetDataTable worksheet={activeWorksheet} />
+              </section>
             )}
 
             {!loadingSheet && !activeWorksheet && (

@@ -33,7 +33,7 @@ export const RecentDriveFilesCard: React.FC<RecentDriveFilesCardProps> = ({ file
     }
   };
 
-  const displayedFiles = showAll ? files : files.slice(0, 5);
+  const displayedFiles = showAll ? files : files.slice(0, 4);
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-2xs relative overflow-hidden flex flex-col justify-between h-full">
